@@ -1,6 +1,5 @@
 # academicprojects
-This repository contains all the academic projects made during the studies for the Bachelor's Degree in Engineering of Computing Systems.
-There are three projects divided by subject:
+There are three projects divided by subject
 ## Algorithms and Data Structures
 ###### (individual project)
 C program inspired by a social network in which users can enstablish one-sided relationships with other users and, through a specific command. The main function of the program is called by a specific command and it can show, for each relationship existing in this network, all the people receiving the maximum number of relationships of that kind.

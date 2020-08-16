@@ -8,6 +8,7 @@
 - ### D'Angelo Stefano <br>stefano4.dangelo@mail.polimi.it
 
 ### Launch instructions
+###### YOU NEED TO INSTALL jdk IN YOUR PC OR LAPTOP TO EXECUTE THE .jar FILES
 ###### Both client.jar and server.jar file are located in */deliverables/jar*
 
 To launch the client .jar from command prompt use this syntax:

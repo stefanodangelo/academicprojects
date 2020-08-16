@@ -1,7 +1,7 @@
-# Progetto di Ingegneria del Software 2020
+# Software Engineering Project 2020
 # ing-sw-2020-cojocaru-colasanti-d-angelo
 
-## Gruppo AM17
+## AM17 Group
 
 - ### Cojocaru - Cristian - 868087 - 10537857 - <br>cristian.cojocaru@mail.polimi.it
 - ### Colasanti - Luca - 891653 - 10627030 - <br>luca.colasanti@mail.polimi.it

@@ -1,0 +1,133 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ImmutableWorker</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.state.immutable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ImmutableWorker (it.polimi.ingsw.santorini.model.gameoperations.state.immutable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ImmutableWorker</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/ 5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/ 13)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.state.immutable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.Gender;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.Worker;
+<i>5</i>&nbsp;
+<i>6</i>&nbsp;/**
+<i>7</i>&nbsp; * Brief Immutable implementation for storing purposes of Worker
+<i>8</i>&nbsp; * @see Worker
+<i>9</i>&nbsp; */
+<i>10</i>&nbsp;public final class ImmutableWorker extends ImmutableGameObject {
+<i>11</i>&nbsp;
+<i>12</i>&nbsp;    private final String color;
+<i>13</i>&nbsp;    private final Gender gender;
+<i>14</i>&nbsp;    private final int playerId;
+<i>15</i>&nbsp;
+<i>16</i>&nbsp;    /**
+<i>17</i>&nbsp;     * Brief Creates a new ImmutableWorker copying the content of the worker passed as a parameter
+<i>18</i>&nbsp;     * @param worker is the state that is wanted to become immutable
+<i>19</i>&nbsp;     */
+<i>20</i>&nbsp;    public ImmutableWorker(Worker worker) {
+<b class="nc"><i>21</i>&nbsp;        super(worker);</b>
+<b class="nc"><i>22</i>&nbsp;        this.color = worker.getColor();</b>
+<b class="nc"><i>23</i>&nbsp;        this.gender = worker.getGender();</b>
+<b class="nc"><i>24</i>&nbsp;        this.playerId = worker.getPlayerId();</b>
+<i>25</i>&nbsp;    }
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    public String getColor() {
+<b class="nc"><i>28</i>&nbsp;        return color;</b>
+<i>29</i>&nbsp;    }
+<i>30</i>&nbsp;
+<i>31</i>&nbsp;    public Gender getGender() {
+<b class="nc"><i>32</i>&nbsp;        return gender;</b>
+<i>33</i>&nbsp;    }
+<i>34</i>&nbsp;
+<i>35</i>&nbsp;    public int getPlayerId() {
+<b class="nc"><i>36</i>&nbsp;        return playerId;</b>
+<i>37</i>&nbsp;    }
+<i>38</i>&nbsp;
+<i>39</i>&nbsp;    /**
+<i>40</i>&nbsp;     * @return the mutable version of {this} ImmutableWorker
+<i>41</i>&nbsp;     */
+<i>42</i>&nbsp;    public Worker getMutable() {
+<b class="nc"><i>43</i>&nbsp;        String color = this.color;</b>
+<b class="nc"><i>44</i>&nbsp;        Gender gender = this.gender;</b>
+<b class="nc"><i>45</i>&nbsp;        Integer playerId = this.playerId;</b>
+<b class="nc"><i>46</i>&nbsp;        Worker worker = new Worker(color, gender);</b>
+<b class="nc"><i>47</i>&nbsp;        worker.setPlayerId(playerId);</b>
+<b class="nc"><i>48</i>&nbsp;        return worker;</b>
+<i>49</i>&nbsp;    }
+<i>50</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

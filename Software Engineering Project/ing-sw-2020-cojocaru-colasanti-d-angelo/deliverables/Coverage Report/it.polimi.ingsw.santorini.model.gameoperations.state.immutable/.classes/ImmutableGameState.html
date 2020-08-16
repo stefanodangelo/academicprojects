@@ -1,0 +1,181 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ImmutableGameState</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.state.immutable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ImmutableGameState (it.polimi.ingsw.santorini.model.gameoperations.state.immutable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ImmutableGameState</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    12,5%
+  </span>
+  <span class="absValue">
+    (1/ 8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    33,3%
+  </span>
+  <span class="absValue">
+    (8/ 24)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.state.immutable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.*;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.GameState;
+<i>5</i>&nbsp;
+<i>6</i>&nbsp;import java.util.ArrayList;
+<i>7</i>&nbsp;import java.util.List;
+<i>8</i>&nbsp;import java.util.Optional;
+<i>9</i>&nbsp;import java.util.stream.Collectors;
+<i>10</i>&nbsp;
+<i>11</i>&nbsp;/**
+<i>12</i>&nbsp; * Brief Immutable implementation for storing purposes of GameState
+<i>13</i>&nbsp; * @see GameState
+<i>14</i>&nbsp; */
+<i>15</i>&nbsp;public final class ImmutableGameState {
+<i>16</i>&nbsp;    /**
+<i>17</i>&nbsp;     * Brief The game map
+<i>18</i>&nbsp;     */
+<i>19</i>&nbsp;    private final ImmutableGameMap map;
+<i>20</i>&nbsp;
+<i>21</i>&nbsp;    /**
+<i>22</i>&nbsp;     * Brief The players
+<i>23</i>&nbsp;     */
+<i>24</i>&nbsp;    private final List&lt;ImmutablePlayer&gt; players;
+<i>25</i>&nbsp;
+<i>26</i>&nbsp;    /**
+<i>27</i>&nbsp;     * Brief The current player
+<i>28</i>&nbsp;     */
+<i>29</i>&nbsp;    private final ImmutablePlayer currentPlayer;
+<i>30</i>&nbsp;
+<i>31</i>&nbsp;    /**
+<i>32</i>&nbsp;     * Brief The active worker (a special worker used by operations)
+<i>33</i>&nbsp;     */
+<i>34</i>&nbsp;    private final ImmutableWorker activeWorker;
+<i>35</i>&nbsp;
+<i>36</i>&nbsp;    /**
+<i>37</i>&nbsp;     * Brief The active position (a special worker used by operations)
+<i>38</i>&nbsp;     */
+<i>39</i>&nbsp;    private final ImmutablePosition activePosition;
+<i>40</i>&nbsp;
+<i>41</i>&nbsp;    /**
+<i>42</i>&nbsp;     * Brief The game delegate
+<i>43</i>&nbsp;     */
+<i>44</i>&nbsp;    private final GameDelegate delegate;
+<i>45</i>&nbsp;
+<i>46</i>&nbsp;    /**
+<i>47</i>&nbsp;     * Brief Creates a new ImmutableGameState copying the content of the state passed as a parameter
+<i>48</i>&nbsp;     * @param gameState is the state that is wanted to become immutable
+<i>49</i>&nbsp;     */
+<b class="fc"><i>50</i>&nbsp;    public ImmutableGameState(GameState gameState) {</b>
+<b class="fc"><i>51</i>&nbsp;        this.map = new ImmutableGameMap(gameState.getMap());</b>
+<b class="fc"><i>52</i>&nbsp;        players = gameState.getPlayers().stream().map(ImmutablePlayer::new).collect(Collectors.toList());</b>
+<b class="fc"><i>53</i>&nbsp;        this.currentPlayer = new ImmutablePlayer(gameState.getCurrentPlayer());</b>
+<b class="fc"><i>54</i>&nbsp;        this.activeWorker = gameState.getActiveWorker() != null ? new ImmutableWorker(gameState.getActiveWorker()) : null;</b>
+<b class="fc"><i>55</i>&nbsp;        this.activePosition = gameState.getActivePosition() != null ? new ImmutablePosition(gameState.getActivePosition()): null;</b>
+<b class="fc"><i>56</i>&nbsp;        this.delegate = gameState.getDelegate();</b>
+<b class="fc"><i>57</i>&nbsp;    }</b>
+<i>58</i>&nbsp;
+<i>59</i>&nbsp;    public ImmutableGameMap getMap() {
+<b class="nc"><i>60</i>&nbsp;        return map;</b>
+<i>61</i>&nbsp;    }
+<i>62</i>&nbsp;
+<i>63</i>&nbsp;    public List&lt;ImmutablePlayer&gt; getPlayers() {
+<b class="nc"><i>64</i>&nbsp;        return players;</b>
+<i>65</i>&nbsp;    }
+<i>66</i>&nbsp;
+<i>67</i>&nbsp;    public ImmutablePlayer getCurrentPlayer() {
+<b class="nc"><i>68</i>&nbsp;        return currentPlayer;</b>
+<i>69</i>&nbsp;    }
+<i>70</i>&nbsp;
+<i>71</i>&nbsp;    public ImmutableWorker getActiveWorker() {
+<b class="nc"><i>72</i>&nbsp;        return activeWorker;</b>
+<i>73</i>&nbsp;    }
+<i>74</i>&nbsp;
+<i>75</i>&nbsp;    public ImmutablePosition getActivePosition() {
+<b class="nc"><i>76</i>&nbsp;        return activePosition;</b>
+<i>77</i>&nbsp;    }
+<i>78</i>&nbsp;
+<i>79</i>&nbsp;    public GameDelegate getDelegate() {
+<b class="nc"><i>80</i>&nbsp;        return delegate;</b>
+<i>81</i>&nbsp;    }
+<i>82</i>&nbsp;
+<i>83</i>&nbsp;    /**
+<i>84</i>&nbsp;     * @return the mutable version of {this} ImmutableGameState
+<i>85</i>&nbsp;     */
+<i>86</i>&nbsp;    public GameState getMutable() {
+<b class="nc"><i>87</i>&nbsp;        GameMap gameMap = map.getMutable();</b>
+<b class="nc"><i>88</i>&nbsp;        List&lt;Player&gt; players = new ArrayList&lt;&gt;(this.players).stream().map(ImmutablePlayer::getMutable).collect(Collectors.toList());</b>
+<b class="nc"><i>89</i>&nbsp;        Player currentPlayer = this.currentPlayer.getMutable();</b>
+<b class="nc"><i>90</i>&nbsp;        Worker activeWorker = this.activeWorker != null ? this.activeWorker.getMutable() : null;</b>
+<b class="nc"><i>91</i>&nbsp;        Position activePosition = this.activePosition != null ? this.activePosition.getMutable() : null;</b>
+<b class="nc"><i>92</i>&nbsp;        GameState gameState = new GameState(gameMap, players, this.delegate);</b>
+<b class="nc"><i>93</i>&nbsp;        gameState.setCurrentPlayer(currentPlayer);</b>
+<b class="nc"><i>94</i>&nbsp;        gameState.setActiveWorker(activeWorker);</b>
+<b class="nc"><i>95</i>&nbsp;        gameState.setActivePosition(activePosition);</b>
+<b class="nc"><i>96</i>&nbsp;        return gameState;</b>
+<i>97</i>&nbsp;    }
+<i>98</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

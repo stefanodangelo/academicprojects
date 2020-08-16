@@ -1,0 +1,77 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ExpandableBRules</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules.expandable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ExpandableBRules (it.polimi.ingsw.santorini.model.gameoperations.rules.expandable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ExpandableBRules</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules.expandable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.BlockType;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.Position;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameMarker;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.*;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.BRules;
+<i>8</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.BState;
+<i>9</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.MState;
+<i>10</i>&nbsp;
+<i>11</i>&nbsp;/**
+<i>12</i>&nbsp; * Brief Dedicated ExpandableRules for the Build operation
+<i>13</i>&nbsp; * @see it.polimi.ingsw.santorini.model.gameoperations.Build
+<i>14</i>&nbsp; */
+<i>15</i>&nbsp;public interface ExpandableBRules extends ExpandableRules&lt;BState, BRules&gt; {
+<i>16</i>&nbsp;    /**
+<i>17</i>&nbsp;     * Brief The expandable allowedPositions Build rule
+<i>18</i>&nbsp;     */
+<i>19</i>&nbsp;    ExpPredicate&lt;BState, GameMarker&gt; allowedPositions();
+<i>20</i>&nbsp;
+<i>21</i>&nbsp;    /**
+<i>22</i>&nbsp;     * Brief The expandable allowedBlockType Build rule
+<i>23</i>&nbsp;     */
+<i>24</i>&nbsp;    ExpListFunction&lt;BState, BlockType, GameMarker&gt; allowedBlockTypes();
+<i>25</i>&nbsp;
+<i>26</i>&nbsp;    /**
+<i>27</i>&nbsp;     * Brief The expandable building Build rule
+<i>28</i>&nbsp;     */
+<i>29</i>&nbsp;    ExpConsumer&lt;BState, GameMarker&gt; building();
+<i>30</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

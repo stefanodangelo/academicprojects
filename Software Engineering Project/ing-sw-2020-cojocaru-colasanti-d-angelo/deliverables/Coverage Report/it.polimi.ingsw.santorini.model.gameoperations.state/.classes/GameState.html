@@ -1,0 +1,210 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: GameState</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.state</a> ]
+</div>
+
+<h1>Coverage Summary for Class: GameState (it.polimi.ingsw.santorini.model.gameoperations.state)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">GameState</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (10/ 10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (17/ 17)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.state;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.*;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.immutable.ImmutableGameState;
+<i>5</i>&nbsp;
+<i>6</i>&nbsp;import java.util.List;
+<i>7</i>&nbsp;
+<i>8</i>&nbsp;/**
+<i>9</i>&nbsp; * Brief Represents the current game state
+<i>10</i>&nbsp; * @see SantoriniGame
+<i>11</i>&nbsp; */
+<i>12</i>&nbsp;public final class GameState {
+<i>13</i>&nbsp;
+<i>14</i>&nbsp;    /**
+<i>15</i>&nbsp;     * Brief The game map
+<i>16</i>&nbsp;     */
+<i>17</i>&nbsp;    private final GameMap map;
+<i>18</i>&nbsp;
+<i>19</i>&nbsp;    /**
+<i>20</i>&nbsp;     * Brief The players
+<i>21</i>&nbsp;     */
+<i>22</i>&nbsp;    private final List&lt;Player&gt; players;
+<i>23</i>&nbsp;
+<i>24</i>&nbsp;    /**
+<i>25</i>&nbsp;     * Brief The current player
+<i>26</i>&nbsp;     */
+<i>27</i>&nbsp;    private Player currentPlayer;
+<i>28</i>&nbsp;
+<i>29</i>&nbsp;    /**
+<i>30</i>&nbsp;     * Brief The active worker (a special worker used by operations)
+<i>31</i>&nbsp;     */
+<i>32</i>&nbsp;    private Worker activeWorker;
+<i>33</i>&nbsp;
+<i>34</i>&nbsp;    /**
+<i>35</i>&nbsp;     * Brief The active position (a special worker used by operations)
+<i>36</i>&nbsp;     */
+<i>37</i>&nbsp;    private Position activePosition;
+<i>38</i>&nbsp;
+<i>39</i>&nbsp;    /**
+<i>40</i>&nbsp;     * Brief The game delegate
+<i>41</i>&nbsp;     */
+<i>42</i>&nbsp;    private final GameDelegate delegate;
+<i>43</i>&nbsp;
+<i>44</i>&nbsp;    /**
+<i>45</i>&nbsp;     * Brief Constructor that sets the map, the players and the delegate
+<i>46</i>&nbsp;     * @param map The game map
+<i>47</i>&nbsp;     * @param players The players
+<i>48</i>&nbsp;     * @param delegate The game delegate
+<i>49</i>&nbsp;     */
+<b class="fc"><i>50</i>&nbsp;    public GameState(GameMap map, List&lt;Player&gt; players, GameDelegate delegate) {</b>
+<b class="fc"><i>51</i>&nbsp;        this.map = map;</b>
+<b class="fc"><i>52</i>&nbsp;        this.players = players;</b>
+<b class="fc"><i>53</i>&nbsp;        this.delegate = delegate;</b>
+<b class="fc"><i>54</i>&nbsp;    }</b>
+<i>55</i>&nbsp;
+<i>56</i>&nbsp;    /**
+<i>57</i>&nbsp;     * Brief Setter for activeWorker
+<i>58</i>&nbsp;     * @param activeWorker Worker
+<i>59</i>&nbsp;     */
+<i>60</i>&nbsp;    public void setActiveWorker(Worker activeWorker) {
+<b class="fc"><i>61</i>&nbsp;        this.activeWorker = activeWorker;</b>
+<b class="fc"><i>62</i>&nbsp;    }</b>
+<i>63</i>&nbsp;
+<i>64</i>&nbsp;    /**
+<i>65</i>&nbsp;     * Brief Setter for activePosition
+<i>66</i>&nbsp;     * @param activePosition Position
+<i>67</i>&nbsp;     */
+<i>68</i>&nbsp;    public void setActivePosition(Position activePosition) {
+<b class="fc"><i>69</i>&nbsp;        this.activePosition = activePosition;</b>
+<b class="fc"><i>70</i>&nbsp;    }</b>
+<i>71</i>&nbsp;
+<i>72</i>&nbsp;    /**
+<i>73</i>&nbsp;     * Brief Setter for currentPlayer
+<i>74</i>&nbsp;     * @param currentPlayer Player
+<i>75</i>&nbsp;     */
+<i>76</i>&nbsp;    public void setCurrentPlayer(Player currentPlayer) {
+<b class="fc"><i>77</i>&nbsp;        this.currentPlayer = currentPlayer;</b>
+<b class="fc"><i>78</i>&nbsp;    }</b>
+<i>79</i>&nbsp;
+<i>80</i>&nbsp;    /**
+<i>81</i>&nbsp;     * Brief Getter for game map
+<i>82</i>&nbsp;     * @return GameMap the map
+<i>83</i>&nbsp;     */
+<i>84</i>&nbsp;    public GameMap getMap() {
+<b class="fc"><i>85</i>&nbsp;        return map;</b>
+<i>86</i>&nbsp;    }
+<i>87</i>&nbsp;
+<i>88</i>&nbsp;    /**
+<i>89</i>&nbsp;     * Brief Getter for game players
+<i>90</i>&nbsp;     * @return List&lt;Player&gt; the players
+<i>91</i>&nbsp;     */
+<i>92</i>&nbsp;    public List&lt;Player&gt; getPlayers() {
+<b class="fc"><i>93</i>&nbsp;        return players;</b>
+<i>94</i>&nbsp;    }
+<i>95</i>&nbsp;
+<i>96</i>&nbsp;    /**
+<i>97</i>&nbsp;     * Brief Getter for the current player
+<i>98</i>&nbsp;     * @return Player
+<i>99</i>&nbsp;     */
+<i>100</i>&nbsp;    public Player getCurrentPlayer() {
+<b class="fc"><i>101</i>&nbsp;        return currentPlayer;</b>
+<i>102</i>&nbsp;    }
+<i>103</i>&nbsp;
+<i>104</i>&nbsp;    /**
+<i>105</i>&nbsp;     * Brief Getter for the active worker
+<i>106</i>&nbsp;     * @return Worker
+<i>107</i>&nbsp;     */
+<i>108</i>&nbsp;    public Worker getActiveWorker() {
+<b class="fc"><i>109</i>&nbsp;        return activeWorker;</b>
+<i>110</i>&nbsp;    }
+<i>111</i>&nbsp;
+<i>112</i>&nbsp;    /**
+<i>113</i>&nbsp;     * Brief Getter for the game delegate
+<i>114</i>&nbsp;     * @return GameDelegate
+<i>115</i>&nbsp;     */
+<i>116</i>&nbsp;    public GameDelegate getDelegate() {
+<b class="fc"><i>117</i>&nbsp;        return delegate;</b>
+<i>118</i>&nbsp;    }
+<i>119</i>&nbsp;
+<i>120</i>&nbsp;    /**
+<i>121</i>&nbsp;     * Brief Getter for the active position
+<i>122</i>&nbsp;     * @return Position
+<i>123</i>&nbsp;     */
+<i>124</i>&nbsp;    public Position getActivePosition() {
+<b class="fc"><i>125</i>&nbsp;        return activePosition;</b>
+<i>126</i>&nbsp;    }
+<i>127</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

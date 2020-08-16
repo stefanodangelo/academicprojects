@@ -1,0 +1,152 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: Player</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model</a> ]
+</div>
+
+<h1>Coverage Summary for Class: Player (it.polimi.ingsw.santorini.model)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Player</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    80%
+  </span>
+  <span class="absValue">
+    (8/ 10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    77,3%
+  </span>
+  <span class="absValue">
+    (17/ 22)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import java.util.ArrayList;
+<i>4</i>&nbsp;import java.util.List;
+<i>5</i>&nbsp;import java.util.Objects;
+<i>6</i>&nbsp;
+<i>7</i>&nbsp;/**
+<i>8</i>&nbsp; * Brief Class representing a specific player in the game having a list of workers and a god card. The array of workers is needed to distinguish between the two workers
+<i>9</i>&nbsp; */
+<i>10</i>&nbsp;public class Player {
+<i>11</i>&nbsp;    private Integer id;
+<i>12</i>&nbsp;    private final String name;
+<i>13</i>&nbsp;    private Card card;
+<i>14</i>&nbsp;    private ArrayList&lt;Worker&gt; workers;
+<i>15</i>&nbsp;
+<b class="fc"><i>16</i>&nbsp;    public Player(Integer id, String name){</b>
+<b class="fc"><i>17</i>&nbsp;        this.id = id;</b>
+<b class="fc"><i>18</i>&nbsp;        this.name = name;</b>
+<b class="fc"><i>19</i>&nbsp;    }</b>
+<i>20</i>&nbsp;
+<i>21</i>&nbsp;    public Integer getId() {
+<b class="fc"><i>22</i>&nbsp;        return id;</b>
+<i>23</i>&nbsp;    }
+<i>24</i>&nbsp;
+<b class="nc"><i>25</i>&nbsp;    public void setId(Integer id){ this.id = id; }</b>
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    public String getName() {
+<b class="fc"><i>28</i>&nbsp;        return name;</b>
+<i>29</i>&nbsp;    }
+<i>30</i>&nbsp;
+<i>31</i>&nbsp;    public Card getCard() {
+<b class="fc"><i>32</i>&nbsp;        return card;</b>
+<i>33</i>&nbsp;    }
+<i>34</i>&nbsp;
+<i>35</i>&nbsp;    @SuppressWarnings(&quot;unchecked&quot;)
+<i>36</i>&nbsp;    public ArrayList&lt;Worker&gt; getWorkers() {
+<b class="fc"><i>37</i>&nbsp;        return (ArrayList&lt;Worker&gt;) workers.clone();</b>
+<i>38</i>&nbsp;    }
+<i>39</i>&nbsp;
+<i>40</i>&nbsp;    public void setCard(Card card) {
+<b class="fc"><i>41</i>&nbsp;        this.card = card;</b>
+<b class="fc"><i>42</i>&nbsp;    }</b>
+<i>43</i>&nbsp;
+<i>44</i>&nbsp;    public void setWorkers(ArrayList&lt;Worker&gt; workers) {
+<b class="fc"><i>45</i>&nbsp;        if(this.workers == null)</b>
+<b class="fc"><i>46</i>&nbsp;            this.workers = workers;</b>
+<b class="fc"><i>47</i>&nbsp;    }</b>
+<i>48</i>&nbsp;
+<i>49</i>&nbsp;    @Override
+<i>50</i>&nbsp;    public boolean equals(Object o) {
+<b class="fc"><i>51</i>&nbsp;        if (this == o) return true;</b>
+<b class="fc"><i>52</i>&nbsp;        if (o == null || getClass() != o.getClass()) return false;</b>
+<b class="fc"><i>53</i>&nbsp;        Player player = (Player) o;</b>
+<b class="fc"><i>54</i>&nbsp;        return id.equals(player.id) &amp;&amp;</b>
+<b class="nc"><i>55</i>&nbsp;                name.equals(player.name) &amp;&amp;</b>
+<b class="nc"><i>56</i>&nbsp;                Objects.equals(card, player.card) &amp;&amp;</b>
+<b class="nc"><i>57</i>&nbsp;                Objects.equals(workers, player.workers);</b>
+<i>58</i>&nbsp;    }
+<i>59</i>&nbsp;
+<i>60</i>&nbsp;    @Override
+<i>61</i>&nbsp;    public String toString() {
+<b class="nc"><i>62</i>&nbsp;        return &quot;Player{&quot; +</b>
+<i>63</i>&nbsp;                &quot;id=&quot; + id +
+<i>64</i>&nbsp;                &quot;, name=&#39;&quot; + name + &#39;\&#39;&#39; +
+<i>65</i>&nbsp;                &quot;, card=&quot; + card +
+<i>66</i>&nbsp;                &quot;, workers=&quot; + workers +
+<i>67</i>&nbsp;                &#39;}&#39;;
+<i>68</i>&nbsp;    }
+<i>69</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

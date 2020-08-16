@@ -1,0 +1,80 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ApplicableRules</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules.applicable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ApplicableRules (it.polimi.ingsw.santorini.model.gameoperations.rules.applicable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ApplicableRules</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules.applicable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameMarker;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.Rules;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.RulesConvertible;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.GameOperationState;
+<i>7</i>&nbsp;
+<i>8</i>&nbsp;import java.util.function.Predicate;
+<i>9</i>&nbsp;
+<i>10</i>&nbsp;/**
+<i>11</i>&nbsp; * Brief Interface for the practical application of a certain type of Rules
+<i>12</i>&nbsp; * @param &lt;T&gt; The type of the GameOperationState required for the rules application
+<i>13</i>&nbsp; * @param &lt;S&gt; The type of the Rules that can be merged with this ApplicableRules
+<i>14</i>&nbsp; * @see Rules
+<i>15</i>&nbsp; */
+<i>16</i>&nbsp;public interface ApplicableRules&lt;T extends GameOperationState, S extends Rules&lt;T, S&gt;&gt; extends RulesConvertible&lt;T, S&gt; {
+<i>17</i>&nbsp;    /**
+<i>18</i>&nbsp;     * Brief State setter for the rules to use it as input at execution time
+<i>19</i>&nbsp;     * @param state The state being set
+<i>20</i>&nbsp;     */
+<i>21</i>&nbsp;    void setState(T state);
+<i>22</i>&nbsp;
+<i>23</i>&nbsp;    /**
+<i>24</i>&nbsp;     * Brief Filter setter for the rules to be filtered at execution time
+<i>25</i>&nbsp;     * @param filter The filter being set
+<i>26</i>&nbsp;     */
+<i>27</i>&nbsp;    void setFilter(Predicate&lt;GameMarker&gt; filter);
+<i>28</i>&nbsp;
+<i>29</i>&nbsp;    /**
+<i>30</i>&nbsp;     * Brief Resets the filter
+<i>31</i>&nbsp;     */
+<i>32</i>&nbsp;    void resetFilter();
+<i>33</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,125 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ConsumerExpansion</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.expansion</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ConsumerExpansion (it.polimi.ingsw.santorini.model.gameoperations.expansion)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ConsumerExpansion</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    66,7%
+  </span>
+  <span class="absValue">
+    (2/ 3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    66,7%
+  </span>
+  <span class="absValue">
+    (4/ 6)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.expansion;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import java.util.Arrays;
+<i>4</i>&nbsp;import java.util.List;
+<i>5</i>&nbsp;import java.util.function.Consumer;
+<i>6</i>&nbsp;
+<i>7</i>&nbsp;/**
+<i>8</i>&nbsp; * Brief Specific supported Expansion for ExpConsumer
+<i>9</i>&nbsp; * @param &lt;T&gt; The Consumer&#39;s input type
+<i>10</i>&nbsp; * @param &lt;S&gt; The type of the supported expansions&#39; marker
+<i>11</i>&nbsp; * @see Expansion
+<i>12</i>&nbsp; * @see ExpConsumer
+<i>13</i>&nbsp; */
+<i>14</i>&nbsp;public class ConsumerExpansion&lt;T, S&gt; extends Expansion&lt;Consumer&lt;T&gt;, S&gt; {
+<i>15</i>&nbsp;
+<i>16</i>&nbsp;    /**
+<i>17</i>&nbsp;     * Brief Constructor that sets the consumer and the markers list coupled with the expansion
+<i>18</i>&nbsp;     * @param consumer The consumer involved
+<i>19</i>&nbsp;     * @param markers The list of markers involved
+<i>20</i>&nbsp;     */
+<i>21</i>&nbsp;    public ConsumerExpansion(Consumer&lt;T&gt; consumer, List&lt;S&gt; markers) {
+<b class="fc"><i>22</i>&nbsp;        super(consumer, markers);</b>
+<b class="fc"><i>23</i>&nbsp;    }</b>
+<i>24</i>&nbsp;
+<i>25</i>&nbsp;    /**
+<i>26</i>&nbsp;     * Brief Constructor that sets the consumer and the markers list as varargs coupled with the expansion
+<i>27</i>&nbsp;     * @param consumer The consumer involved
+<i>28</i>&nbsp;     * @param markers The list of markers involved as varargs
+<i>29</i>&nbsp;     */
+<i>30</i>&nbsp;    @SafeVarargs
+<i>31</i>&nbsp;    public ConsumerExpansion(Consumer&lt;T&gt; consumer, S... markers) {
+<b class="fc"><i>32</i>&nbsp;        this(consumer, Arrays.asList(markers));</b>
+<b class="fc"><i>33</i>&nbsp;    }</b>
+<i>34</i>&nbsp;
+<i>35</i>&nbsp;    /**
+<i>36</i>&nbsp;     * Brief Constructor that sets only the consumer coupled with expansion
+<i>37</i>&nbsp;     * @param consumer The consumer involved
+<i>38</i>&nbsp;     */
+<i>39</i>&nbsp;    public ConsumerExpansion(Consumer&lt;T&gt; consumer) {
+<b class="nc"><i>40</i>&nbsp;        super(consumer);</b>
+<b class="nc"><i>41</i>&nbsp;    }</b>
+<i>42</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

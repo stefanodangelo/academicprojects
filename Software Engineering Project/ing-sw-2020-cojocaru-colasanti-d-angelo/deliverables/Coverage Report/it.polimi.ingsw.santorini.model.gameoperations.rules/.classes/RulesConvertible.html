@@ -1,0 +1,115 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: RulesConvertible</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules</a> ]
+</div>
+
+<h1>Coverage Summary for Class: RulesConvertible (it.polimi.ingsw.santorini.model.gameoperations.rules)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">RulesConvertible</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/ 2)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.GameOperationState;
+<i>5</i>&nbsp;
+<i>6</i>&nbsp;/**
+<i>7</i>&nbsp; * Brief Interface for Rules conversion
+<i>8</i>&nbsp; * @param &lt;T&gt; The type of the GameOperationState required for the rules application
+<i>9</i>&nbsp; * @param &lt;S&gt; The type of the Rules that can be merged with this RulesConvertible
+<i>10</i>&nbsp; *
+<i>11</i>&nbsp; */
+<i>12</i>&nbsp;public interface RulesConvertible&lt;T extends GameOperationState, S extends Rules&lt;T, S&gt;&gt; {
+<i>13</i>&nbsp;    /**
+<i>14</i>&nbsp;     * Brief Converts this to a Rules instance
+<i>15</i>&nbsp;     * @return S Rules instance
+<i>16</i>&nbsp;     */
+<i>17</i>&nbsp;    S toRules();
+<i>18</i>&nbsp;
+<i>19</i>&nbsp;    /**
+<i>20</i>&nbsp;     * Brief Merges this RulesConvertible with another one
+<i>21</i>&nbsp;     * @param rulesConvertible the RulesConvertible being merged
+<i>22</i>&nbsp;     */
+<i>23</i>&nbsp;    default void merge(RulesConvertible&lt;T, S&gt; rulesConvertible) {
+<b class="fc"><i>24</i>&nbsp;        toRules().merge(rulesConvertible.toRules());</b>
+<b class="fc"><i>25</i>&nbsp;    }</b>
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    /**
+<i>28</i>&nbsp;     * Brief Tells if this instance is rules complete
+<i>29</i>&nbsp;     * @return Boolean true if at least one expansion per rule is found, false otherwise
+<i>30</i>&nbsp;     */
+<i>31</i>&nbsp;    Boolean isComplete();
+<i>32</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

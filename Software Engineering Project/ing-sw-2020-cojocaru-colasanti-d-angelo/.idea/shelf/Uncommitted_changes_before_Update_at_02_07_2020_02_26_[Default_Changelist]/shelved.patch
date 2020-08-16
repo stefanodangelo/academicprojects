@@ -1,0 +1,859 @@
+Index: src/main/java/it/polimi/ingsw/santorini/view/network/ClientNetworkHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.view.network;\r\n\r\nimport it.polimi.ingsw.santorini.communication.*;\r\nimport it.polimi.ingsw.santorini.view.View;\r\nimport it.polimi.ingsw.santorini.view.delegates.ViewDelegate;\r\nimport it.polimi.ingsw.santorini.view.exceptions.EmptyBufferException;\r\nimport it.polimi.ingsw.santorini.view.utils.ClientSocketMessage;\r\n\r\nimport java.io.*;\r\nimport java.net.ConnectException;\r\nimport java.net.Socket;\r\nimport java.net.SocketException;\r\nimport java.net.SocketTimeoutException;\r\nimport java.util.ArrayList;\r\nimport java.util.List;\r\n\r\n/**\r\n * Brief Handler of the asynchronous interaction between client and server\r\n */\r\npublic class ClientNetworkHandler implements Runnable, ViewDelegate {\r\n    /**\r\n     * Brief Inner class implementing a buffer containing all the message received from the server\r\n     */\r\n    public static class MessageReceiver{\r\n        private static final List<Object> messageBuffer = new ArrayList<>();\r\n\r\n        /**\r\n         * Brief Adds the message currently received to the buffer\r\n         * @param message is the message sent by the server\r\n         */\r\n        public static void receive(Object message){\r\n            synchronized (messageBuffer){\r\n                ClientNetworkHandler.MessageReceiver.messageBuffer.add(message);\r\n            }\r\n        }\r\n\r\n        /**\r\n         * @return the first available message in the buffer, otherwise null\r\n         */\r\n        private static Object getMessage(){\r\n            synchronized (messageBuffer){\r\n                if(!messageBuffer.isEmpty()){\r\n                    Object message = messageBuffer.get(0);\r\n                    messageBuffer.remove(message);\r\n                    return message;\r\n                }\r\n            }\r\n            throw new EmptyBufferException();\r\n        }\r\n    }\r\n    private String ip;\r\n    private Integer port;\r\n    private Socket socket;\r\n    private static ObjectInputStream inputStream;\r\n    private static ObjectOutputStream outputStream;\r\n    private final MessageAnalyzer analyzer;\r\n\r\n    /**\r\n     * Brief Initializes the server's ip and port in order to communicate with it and creates a new Analyzer\r\n     * @param ip is the server's ip\r\n     * @param port is the port through which client and server will communicate\r\n     * @param view is the view reference to pass to the analyzer in order to call the methods on it\r\n     */\r\n    public ClientNetworkHandler(String ip, Integer port, View view){\r\n        this.ip = ip;\r\n        this.port = port;\r\n        analyzer = new MessageAnalyzer(view);\r\n        view.setDelegate(this);\r\n        if (view.requestsImmediateRun()) run();\r\n    }\r\n\r\n    /**\r\n     * Brief calls run() on View request\r\n     */\r\n    @Override\r\n    public void onRunRequested() {\r\n        run();\r\n    }\r\n\r\n    /**\r\n     * Brief updates the IP\r\n     */\r\n    @Override\r\n    public void onIPUpdated(String ip) {\r\n        this.ip = ip;\r\n    }\r\n\r\n    /**\r\n     * Brief updates the Port\r\n     */\r\n    @Override\r\n    public void onPortUpdated(Integer port) {\r\n        this.port = port;\r\n    }\r\n\r\n    /**\r\n     * Brief sends a message\r\n     */\r\n    @Override\r\n    public void sendMessage(Object message) {\r\n        asyncWrite(message);\r\n    }\r\n\r\n    /**\r\n     * Brief Resets the socket's timeout\r\n     */\r\n    private void resetTimeout(){\r\n        try {\r\n            socket.setSoTimeout(0);\r\n        } catch (SocketException socketException) {\r\n            socketException.printStackTrace();\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Forces the closing of the client application\r\n     */\r\n    private void shutdownSocket(){\r\n        System.out.println(ClientSocketMessage.serverShutdownMessage);\r\n        System.out.println(ClientSocketMessage.successfulClosingMessage);\r\n        Runtime.getRuntime().halt(0);\r\n    }\r\n\r\n    /**\r\n     * Brief Analyzes the message coming from the server\r\n     */\r\n    private void analyzeIncomingMessages(){\r\n        while(true) {\r\n            try {\r\n                Object serverResponse = ClientNetworkHandler.MessageReceiver.getMessage();\r\n                if (serverResponse instanceof LobbyMessage)\r\n                    handleMessage((LobbyMessage) serverResponse);\r\n                else if (serverResponse instanceof GameMessage)\r\n                    handleMessage((GameMessage) serverResponse);\r\n                else if (serverResponse instanceof TextMessage)\r\n                    analyzer.getView().printMessage(((TextMessage) serverResponse).getContent());\r\n            } catch (EmptyBufferException ignored){\r\n            }\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Handles a message received during the lobby phase or just containing textual information to print\r\n     * @param message is the message to handleMessage\r\n     */\r\n    private void handleMessage(LobbyMessage message) {\r\n        if (message.getId() != null)\r\n            analyzer.analyzeMessage(message);\r\n        if (message.getTextualMessageId() != null)\r\n            analyzer.getView().printMessage(ClientSocketMessage.serverAnswerMessage + NetworkMessage.values()[message.getTextualMessageId()].getMessage());\r\n    }\r\n\r\n    /**\r\n     * Brief Analyzes a message received during the game\r\n     * @param message is the message to handleMessage\r\n     */\r\n    private void handleMessage(GameMessage message) {\r\n        View.ViewStatus.lockStatus();\r\n        analyzer.analyzeMessage(message, (analyzedMessage) -> {\r\n            if (analyzedMessage != null) asyncWrite(analyzedMessage);\r\n            View.ViewStatus.unlockStatus();\r\n        });\r\n    }\r\n\r\n\r\n    /**\r\n     * Brief Asynchronously reads a message received from the server\r\n     */\r\n    public void asyncRead() {\r\n        new Thread(() -> {\r\n            while(true){\r\n                Object serverResponse;\r\n                try {\r\n                    serverResponse = inputStream.readObject();\r\n                    if(serverResponse instanceof QuitMessage){\r\n                        analyzer.getView().printMessage(QuitMessage.getAnswer());\r\n                        break;\r\n                    }\r\n                    else if(serverResponse instanceof KickMessage){\r\n                        analyzer.getView().printMessage(KickMessage.getMessage());\r\n                        break;\r\n                    }\r\n                    else\r\n                        ClientNetworkHandler.MessageReceiver.receive(serverResponse);\r\n                } catch (SocketTimeoutException e) {\r\n                    resetTimeout();\r\n                } catch (EOFException e) {\r\n                    //this client is disconnecting\r\n                    break;\r\n                } catch (SocketException e) {\r\n                    shutdownSocket();\r\n                } catch (ClassNotFoundException | IOException ignored) {\r\n                }\r\n            }\r\n            closeConnection();\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Sends a message to the server\r\n     */\r\n    @SuppressWarnings(\"SynchronizeOnNonFinalField\")\r\n    public static void asyncWrite(Object message){\r\n        new Thread(() -> {\r\n            try {\r\n                synchronized (outputStream) {\r\n                    try {\r\n                        outputStream.reset();\r\n                        outputStream.writeObject(message);\r\n                        outputStream.flush();\r\n                    } catch (IOException ignored) {\r\n                    }\r\n                }\r\n            } catch (NullPointerException ignored){\r\n            }\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Closes all the active connections with the server, then closes the application\r\n     */\r\n    private void closeConnection(){\r\n        try {\r\n            if(outputStream != null)\r\n                outputStream.close();\r\n            if(inputStream != null)\r\n                inputStream.close();\r\n            socket.close();\r\n        } catch (NullPointerException e) {\r\n            System.out.println(ClientSocketMessage.serverShutdownMessage);\r\n        } catch (IOException ignored) {\r\n        } finally {\r\n            System.out.println(ClientSocketMessage.successfulClosingMessage);\r\n        }\r\n        System.exit(0);\r\n    }\r\n\r\n    /**\r\n     * Brief Tries to create a new connection with the server, closing every connection if some troubles have been encountered\r\n     */\r\n    private void connectToServer() {\r\n        try {\r\n            socket = new Socket(ip, port);\r\n            System.out.println(ClientSocketMessage.queuedMessage);\r\n        } catch(ConnectException e){\r\n            closeConnection();\r\n        } catch (IOException ignored) {\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Checks whether the server is full or not by waiting if within a certain amount of time it succeeds in connecting to the server\r\n     */\r\n    private void checkServerCapability(){\r\n        int TIME_TO_WAIT = 1000; //[ms]\r\n        new Thread(() -> {\r\n            while(!socket.isClosed()){\r\n                try {\r\n                    socket.setSoTimeout(TIME_TO_WAIT);\r\n                    while(socket.getSoTimeout() > 0) Thread.onSpinWait();\r\n                } catch (SocketException ignored) {\r\n                }\r\n            }\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Connects the I/O streams with the server's ones, closing every connection if the server is full\r\n     */\r\n    private void createStreamingConnections(){\r\n        try {\r\n            inputStream = new ObjectInputStream(socket.getInputStream());\r\n            outputStream = new ObjectOutputStream(socket.getOutputStream());\r\n            System.out.println(ClientSocketMessage.successfulConnectionMessage);\r\n        } catch(SocketTimeoutException e){\r\n            System.out.println(ClientSocketMessage.fullServerMessage);\r\n            closeConnection();\r\n        } catch (IOException ignored) {\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Connects the client with the server, then lets them communicate each other\r\n     */\r\n    @Override\r\n    public void run() {\r\n        connectToServer();\r\n        checkServerCapability();\r\n        createStreamingConnections();\r\n        analyzer.getView().printGameTitle();\r\n        asyncRead();\r\n        analyzeIncomingMessages();\r\n    }\r\n}\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/view/network/ClientNetworkHandler.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/view/network/ClientNetworkHandler.java	(date 1593647360459)
+@@ -134,6 +134,10 @@
+                     handleMessage((GameMessage) serverResponse);
+                 else if (serverResponse instanceof TextMessage)
+                     analyzer.getView().printMessage(((TextMessage) serverResponse).getContent());
++                else if (serverResponse instanceof WinMessage) {
++                    analyzer.getView().printMessage(((WinMessage) serverResponse).getTextMessage().getContent());
++                    asyncWrite(new GameMessage(View.getPlayerId(), false, null));  //receiving confirmation
++                }
+             } catch (EmptyBufferException ignored){
+             }
+         }
+@@ -173,7 +177,8 @@
+                 try {
+                     serverResponse = inputStream.readObject();
+                     if(serverResponse instanceof QuitMessage){
+-                        analyzer.getView().printMessage(QuitMessage.getAnswer());
++                        if(!((QuitMessage) serverResponse).isGameOver())
++                            analyzer.getView().printMessage(QuitMessage.getAnswer());
+                         break;
+                     }
+                     else if(serverResponse instanceof KickMessage){
+Index: src/main/java/it/polimi/ingsw/santorini/controller/VirtualView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.controller;\r\n\r\nimport it.polimi.ingsw.santorini.communication.*;\r\nimport it.polimi.ingsw.santorini.controller.exceptions.NoMessageWithSuchIdException;\r\nimport it.polimi.ingsw.santorini.controller.server.ServerNetworkHandler;\r\nimport it.polimi.ingsw.santorini.model.Player;\r\nimport it.polimi.ingsw.santorini.model.PlayersHandler;\r\nimport it.polimi.ingsw.santorini.model.utils.TurnMessage;\r\n\r\nimport java.util.*;\r\n\r\n/**\r\n * Brief Class interacting with the server in order to return the expected values to the controller\r\n */\r\npublic class VirtualView {\r\n    private final MessageReceiver receiver = new MessageReceiver();\r\n    private final ServerNetworkHandler server = ServerNetworkHandler.getInstance();\r\n\r\n    /**\r\n     * Brief Creates a new VirtualView and sets the receiver reference in the server\r\n     */\r\n    public VirtualView() { server.setReceiver(receiver);}\r\n\r\n    /**\r\n     * @return the names of the players in game\r\n     */\r\n    protected List<String> getPlayersNames() {\r\n        return server.getActiveNames();\r\n    }\r\n\r\n    /**\r\n     * Brief Sends the active worker's position to each player\r\n     * @param position is the active worker's position\r\n     */\r\n    public void updateActiveWorker(ImmutablePosition position){\r\n        server.send(null, new GameMessage(true, Collections.singletonList(position)));\r\n    }\r\n\r\n    /**\r\n     * Brief Sends the serialized board to each client together with a list of positions, then waits for a receiving confirmation from every client\r\n     * @param serializedBoard is a serialized board containing all the relevant information\r\n     * @param allowedPositions are the positions where the current playing player can move or place his worker or build a block\r\n     */\r\n    public void sendBoard(Object[][] serializedBoard, List<ImmutablePosition> allowedPositions) {\r\n        server.send(null, new GameMessage(MethodHeading.intValueOf(MethodHeading.BOARD), true, Arrays.asList(serializedBoard, allowedPositions)));\r\n    }\r\n\r\n    /**\r\n     * Brief Sends a poll to each player whom id are contained in a map passed as a parameter\r\n     * @param playersNames is a map between the ids of the players who are asked to answer the poll and their names\r\n     * @param question is the poll's question\r\n     * @return the list of players' ids voted by each player\r\n     */\r\n    public List<Integer> getVote(Map<Integer, String> playersNames, String question) {\r\n        List<Integer> votedIds = new ArrayList<>();\r\n        GameMessage answer;\r\n        server.send(null, new GameMessage(MethodHeading.intValueOf(MethodHeading.VOTE), true, Arrays.asList(playersNames, question)));\r\n        for(Integer id : playersNames.keySet()) {\r\n            answer = waitAnswer(id);\r\n            votedIds.add((Integer) answer.getData().get(0));\r\n            if(!id.equals(playersNames.size()))   //if the player's id is not the last one of the list\r\n                server.send(id, new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitVote)));\r\n        }\r\n        return votedIds;\r\n    }\r\n\r\n    /**\r\n     * Brief Sends to a player his result in the match, then disconnects him from the server or kick him if the game isn't over yet\r\n     * @param playerId is the id of the receiving player\r\n     * @param message is the message containing the result of the match\r\n     * @param gameOver is true if game is over\r\n     */\r\n    public void printVictoryMessage(Integer playerId, String message, Boolean gameOver) {\r\n        server.send(playerId, new TextMessage(message));\r\n        if(gameOver != null){\r\n            if (gameOver)\r\n                server.send(playerId, new QuitMessage());\r\n            else\r\n                server.send(playerId, new KickMessage());\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Sends to each client a list conatining the chosen cards during the setup phase\r\n     * @param cards are the chosen cards\r\n     */\r\n    public void updateCards(List<ImmutableCard> cards){\r\n        server.send(null, new GameMessage(true, Collections.singletonList(cards)));\r\n    }\r\n\r\n    /**\r\n     * Brief Resets any parameter, for each player, when a turn ends\r\n     */\r\n    public void resetParameters() {\r\n        server.send(null, new GameMessage(true, null));\r\n    }\r\n\r\n    /**\r\n     * Brief Waits for an answer from a certain player\r\n     * @param playerId is the id of the player who presumably sent the message\r\n     * @return the message received from the specified player\r\n     */\r\n    private GameMessage waitAnswer(Integer playerId){\r\n        GameMessage message;\r\n        do{\r\n            try {\r\n                message = receiver.getMessage(playerId);\r\n            } catch (NoMessageWithSuchIdException e) {\r\n                message = null;\r\n            }\r\n        } while (message == null);\r\n        return message;\r\n    }\r\n\r\n    /**\r\n     * Brief Handles a general choice by sending a message to a certain player, telling the other ones to wait their turn and waiting for the player's answer\r\n     * @param message is the message to send to the player\r\n     * @param playerId is the id of the receiving player\r\n     * @return a message containing the player's answer\r\n     */\r\n    protected GameMessage manageChoice(GameMessage message, Integer playerId){\r\n        server.send(playerId, message);\r\n        server.sendToWaitingPlayers(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitChoice)), playerId);\r\n        return waitAnswer(playerId);\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/controller/VirtualView.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/controller/VirtualView.java	(date 1593647360440)
+@@ -59,7 +59,7 @@
+             answer = waitAnswer(id);
+             votedIds.add((Integer) answer.getData().get(0));
+             if(!id.equals(playersNames.size()))   //if the player's id is not the last one of the list
+-                server.send(id, new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitVote)));
++                server.send(id, new LobbyMessage(NetworkMessage.waitVote.ordinal()));
+         }
+         return votedIds;
+     }
+@@ -71,13 +71,15 @@
+      * @param gameOver is true if game is over
+      */
+     public void printVictoryMessage(Integer playerId, String message, Boolean gameOver) {
+-        server.send(playerId, new TextMessage(message));
+         if(gameOver != null){
+-            if (gameOver)
+-                server.send(playerId, new QuitMessage());
++            if (gameOver) {
++                server.send(playerId, new WinMessage(new TextMessage(message)));
++                waitAnswer(playerId);
++                server.send(playerId, new QuitMessage(true));
++            }
+             else
+                 server.send(playerId, new KickMessage());
+-        }
++        } else server.send(playerId, new TextMessage(message));
+     }
+ 
+     /**
+@@ -120,7 +122,7 @@
+      */
+     protected GameMessage manageChoice(GameMessage message, Integer playerId){
+         server.send(playerId, message);
+-        server.sendToWaitingPlayers(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitChoice)), playerId);
++        server.sendToWaitingPlayers(new LobbyMessage(NetworkMessage.waitChoice.ordinal()), playerId);
+         return waitAnswer(playerId);
+     }
+ }
+Index: pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\r\n  xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\r\n    <modelVersion>4.0.0</modelVersion>\r\n    <groupId>it.polimi.ingsw</groupId>\r\n    <artifactId>AM17</artifactId>\r\n    <version>1.0-SNAPSHOT</version>\r\n    <properties>\r\n        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\r\n        <maven.compiler.source>11</maven.compiler.source>\r\n        <maven.compiler.target>11</maven.compiler.target>\r\n    </properties>\r\n    <dependencies>\r\n        <dependency>\r\n            <groupId>org.openjfx</groupId>\r\n            <artifactId>javafx-controls</artifactId>\r\n            <version>11.0.2</version>\r\n        </dependency>\r\n        <dependency>\r\n            <groupId>org.openjfx</groupId>\r\n            <artifactId>javafx-media</artifactId>\r\n            <version>14.0.1</version>\r\n        </dependency>\r\n        <dependency>\r\n            <groupId>org.junit.jupiter</groupId>\r\n            <artifactId>junit-jupiter-engine</artifactId>\r\n            <version>5.6.1</version>\r\n          </dependency>\r\n          <dependency>\r\n            <groupId>org.junit.jupiter</groupId>\r\n            <artifactId>junit-jupiter</artifactId>\r\n            <version>RELEASE</version>\r\n            <scope>test</scope>\r\n          </dependency>\r\n    </dependencies>\r\n    <build>\r\n        <plugins>\r\n            <plugin>\r\n                <groupId>org.apache.maven.plugins</groupId>\r\n                <artifactId>maven-compiler-plugin</artifactId>\r\n                <version>3.8.0</version>\r\n                <configuration>\r\n                    <release>11</release>\r\n                </configuration>\r\n            </plugin>\r\n            <plugin>\r\n                <groupId>org.openjfx</groupId>\r\n                <artifactId>javafx-maven-plugin</artifactId>\r\n                <version>0.0.1</version>\r\n                <configuration>\r\n                    <mainClass>it.polimi.ingsw.App</mainClass>\r\n                </configuration>\r\n            </plugin>\r\n            <plugin>\r\n                <artifactId>maven-assembly-plugin</artifactId>\r\n                <configuration>\r\n                    <archive>\r\n                        <manifest>\r\n                            <mainClass>it.polimi.ingsw.santorini.ClientApp</mainClass>\r\n                        </manifest>\r\n                    </archive>\r\n                    <descriptorRefs>\r\n                        <descriptorRef>jar-with-dependencies</descriptorRef>\r\n                    </descriptorRefs>\r\n                </configuration>\r\n                <executions>\r\n                    <execution>\r\n                        <id>make-assembly</id> <!-- this is used for inheritance merges -->\r\n                        <phase>package</phase> <!-- bind to the packaging phase -->\r\n                        <goals>\r\n                            <goal>single</goal>\r\n                        </goals>\r\n                    </execution>\r\n                </executions>\r\n            </plugin>\r\n        </plugins>\r\n        <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->\r\n            <plugins>\r\n              <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->\r\n              <plugin>\r\n                <artifactId>maven-clean-plugin</artifactId>\r\n                <version>3.1.0</version>\r\n              </plugin>\r\n              <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->\r\n              <plugin>\r\n                <artifactId>maven-resources-plugin</artifactId>\r\n                <version>3.0.2</version>\r\n              </plugin>\r\n              <plugin>\r\n                <artifactId>maven-compiler-plugin</artifactId>\r\n                <version>3.8.0</version>\r\n              </plugin>\r\n              <plugin>\r\n                <artifactId>maven-surefire-plugin</artifactId>\r\n                <version>2.22.1</version>\r\n              </plugin>\r\n              <plugin>\r\n                <artifactId>maven-jar-plugin</artifactId>\r\n                <version>3.0.2</version>\r\n              </plugin>\r\n              <plugin>\r\n                <artifactId>maven-install-plugin</artifactId>\r\n                <version>2.5.2</version>\r\n              </plugin>\r\n              <plugin>\r\n                <artifactId>maven-deploy-plugin</artifactId>\r\n                <version>2.8.2</version>\r\n              </plugin>\r\n              <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->\r\n              <plugin>\r\n                <artifactId>maven-site-plugin</artifactId>\r\n                <version>3.7.1</version>\r\n              </plugin>\r\n              <plugin>\r\n                <artifactId>maven-project-info-reports-plugin</artifactId>\r\n                <version>3.0.0</version>\r\n              </plugin>\r\n            </plugins>\r\n          </pluginManagement>\r\n    </build>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- pom.xml	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ pom.xml	(date 1593646805670)
+@@ -25,12 +25,30 @@
+             <artifactId>junit-jupiter-engine</artifactId>
+             <version>5.6.1</version>
+           </dependency>
+-          <dependency>
++        <dependency>
+             <groupId>org.junit.jupiter</groupId>
+             <artifactId>junit-jupiter</artifactId>
+             <version>RELEASE</version>
+             <scope>test</scope>
+           </dependency>
++        <dependency>
++            <groupId>org.openjfx</groupId>
++            <artifactId>javafx-graphics</artifactId>
++            <version>11.0.2</version>
++            <classifier>win</classifier>
++        </dependency>
++        <dependency>
++            <groupId>org.openjfx</groupId>
++            <artifactId>javafx-graphics</artifactId>
++            <version>11.0.2</version>
++            <classifier>linux</classifier>
++        </dependency>
++        <dependency>
++            <groupId>org.openjfx</groupId>
++            <artifactId>javafx-graphics</artifactId>
++            <version>11.0.2</version>
++            <classifier>mac</classifier>
++        </dependency>
+     </dependencies>
+     <build>
+         <plugins>
+@@ -47,8 +65,32 @@
+                 <artifactId>javafx-maven-plugin</artifactId>
+                 <version>0.0.1</version>
+                 <configuration>
+-                    <mainClass>it.polimi.ingsw.App</mainClass>
++                    <mainClass>it.polimi.ingsw.santorini.ClientApp</mainClass>
+                 </configuration>
++            </plugin>
++            <plugin>
++                <groupId>org.apache.maven.plugins</groupId>
++                <artifactId>maven-shade-plugin</artifactId>
++                <version>3.2.0</version>
++                <executions>
++                    <execution>
++                        <phase>package</phase>
++                        <goals>
++                            <goal>shade</goal>
++                        </goals>
++                        <configuration>
++                            <shadedArtifactAttached>true</shadedArtifactAttached>
++                            <shadedClassifierName>project-classifier</shadedClassifierName>
++                            <outputFile>shade\${project.artifactId}.jar</outputFile>
++                            <transformers>
++                                <transformer implementation=
++                                                     "org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
++                                    <mainClass>it.polimi.ingsw.santorini.ClientApp</mainClass>
++                                </transformer>
++                            </transformers>
++                        </configuration>
++                    </execution>
++                </executions>
+             </plugin>
+             <plugin>
+                 <artifactId>maven-assembly-plugin</artifactId>
+@@ -91,7 +133,7 @@
+               </plugin>
+               <plugin>
+                 <artifactId>maven-surefire-plugin</artifactId>
+-                <version>2.22.1</version>
++                <version>2.19.1</version>
+               </plugin>
+               <plugin>
+                 <artifactId>maven-jar-plugin</artifactId>
+Index: src/main/java/it/polimi/ingsw/santorini/controller/server/ClientConnectionSocket.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.controller.server;\r\n\r\nimport it.polimi.ingsw.santorini.communication.*;\r\nimport it.polimi.ingsw.santorini.controller.exceptions.NameAlreadyTakenException;\r\nimport it.polimi.ingsw.santorini.controller.utils.ConnectionMessage;\r\nimport it.polimi.ingsw.santorini.controller.utils.LobbyCommand;\r\n\r\nimport java.io.IOException;\r\nimport java.io.ObjectInputStream;\r\nimport java.io.ObjectOutputStream;\r\nimport java.net.Socket;\r\nimport java.net.SocketException;\r\nimport java.util.Arrays;\r\nimport java.util.Collections;\r\n\r\n/**\r\n * Brief Server's socket communicating with a single client\r\n */\r\npublic class ClientConnectionSocket implements Runnable {\r\n    /**\r\n     * Brief Inner class responsible for the client notification\r\n     */\r\n    private class Notifier implements Observer<Object> {\r\n        private Integer playerId;\r\n        /**\r\n         * Brief When called asynchronously sends a message to a specific client\r\n         * @param message is the object to send\r\n         */\r\n        @Override\r\n        public synchronized void update(Object message) {\r\n            Thread t = new Thread(() -> {\r\n                try {\r\n                    outputStream.reset();\r\n                    outputStream.writeObject(message);\r\n                    outputStream.flush();\r\n                } catch (SocketException e) {\r\n                    closeConnection(false);\r\n                } catch (IOException ignored) {\r\n                }\r\n            });\r\n            t.start();\r\n            try {\r\n                t.join();\r\n            } catch (InterruptedException ignored) {\r\n            }\r\n            if(message instanceof KickMessage)\r\n                closeConnection(true);\r\n        }\r\n\r\n        /**\r\n         * Brief Updates the observer's id assigning it a new value\r\n         * @param newId is the new value for the observer's id\r\n         */\r\n        @Override\r\n        public void updateId(Integer newId) {\r\n            playerId = newId;\r\n            update(new GameMessage(MethodHeading.intValueOf(MethodHeading.ID), false, Collections.singletonList(newId)));\r\n        }\r\n    }\r\n    private final ServerNetworkHandler server;\r\n    private final Socket clientSocket;\r\n    private ObjectInputStream inputStream;\r\n    private ObjectOutputStream outputStream;\r\n    private final ClientConnectionSocket.Notifier notifier;\r\n\r\n    /**\r\n     * Brief Creates the socket for the communication with client, then registers itself in the observers' list\r\n     * @param server is the server's instance\r\n     * @param clientSocket is the socket that will interact with client\r\n     */\r\n    public ClientConnectionSocket(ServerNetworkHandler server, Socket clientSocket){\r\n        this.server = server;\r\n        this.clientSocket = clientSocket;\r\n        notifier = this.new Notifier();\r\n\r\n        //observer registration\r\n        server.registerObserver(notifier);\r\n        notifier.playerId = server.getObserversNumber();\r\n    }\r\n\r\n    /**\r\n     * Brief Closes all the active communicating channels with the client, then disconnects it\r\n     * @param onKickedPlayer is true if the disconnection takes place during the kick of a player\r\n     */\r\n    private void closeConnection(boolean onKickedPlayer){\r\n        try {\r\n            inputStream.close();\r\n            outputStream.close();\r\n            clientSocket.close();\r\n            server.disconnect(notifier, notifier.playerId, onKickedPlayer);\r\n        } catch (IOException ignored) {\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Checks if a player can log in the lobby by analyzing the username he chose\r\n     * @implNote the convention followed for the ids is that they are progressive numbers starting from 1\r\n     * @param playerName is the name of the logging-in player\r\n     * @throws NameAlreadyTakenException if there's another player in the lobby with the same name\r\n     */\r\n    private synchronized void logIn(String playerName) throws NameAlreadyTakenException{\r\n        if(server.getActiveNames().contains(playerName))\r\n            throw new NameAlreadyTakenException();\r\n        server.addName(notifier.playerId, playerName);\r\n        sendCommandsList(false);\r\n        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.host)));\r\n        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.demandInput)));\r\n        for(int clientId = ServerNetworkHandler.getHostId() + 1; clientId <= server.getActiveNames().size(); clientId++){\r\n            server.send(clientId, new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitStart)));\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Handles the registration of a player by trying to log him in the server and notifying him if his username has already been chosen\r\n     * @param playerName is the username of the player who's trying to log in the lobby\r\n     */\r\n    private void handlePlayerUsername(String playerName) {\r\n        try {\r\n            logIn(playerName);\r\n        } catch (NameAlreadyTakenException e){\r\n            notifier.update(new TextMessage(e.getMessage()));\r\n            notifier.update(new GameMessage(MethodHeading.intValueOf(MethodHeading.USERNAME), false, Collections.singletonList(notifier.playerId)));\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Sends a specific list of commands to each player or to a specific player\r\n     * @param onlyToHost specify whether to send the message to everyone or only to the host\r\n     */\r\n    private void sendCommandsList(boolean onlyToHost) {\r\n        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYCOMMANDS), Arrays.asList(LobbyCommand.getLobbyCommands(), LobbyCommand.getCommandsHelpingText())));\r\n        if (!onlyToHost){\r\n            for(int i = ServerNetworkHandler.getHostId(); i < server.getObserversNumber(); i++)\r\n                server.send(i+1, new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYCOMMANDS), Arrays.asList(QuitMessage.getRequest(), \"close application\")));\r\n            server.notifyObservers(new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYLIST), Arrays.asList(server.getClientsIds(), server.getActiveNames())));\r\n        } else\r\n            server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYLIST), Arrays.asList(server.getClientsIds(), server.getActiveNames())));\r\n    }\r\n\r\n    /**\r\n     * Brief Checks if the client requested to change the lobby's size, that is if the method completes its execution without throwing any exception\r\n     * @param request is the textual format of client's request\r\n     */\r\n    private void checkSizeChangeRequest(String request) {\r\n        Integer size = Integer.parseInt(request);\r\n        if (server.setLobbyDimension(size)) {\r\n            sendCommandsList(true);\r\n            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.sizeChanged)));\r\n        }\r\n        else\r\n            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.sizeNotChanged)));\r\n    }\r\n\r\n    /**\r\n     * Brief Checks if the client requested to start the game and in that case asks the server if it's possible to start a new game, consequently forwarding the outcome to the client\r\n     * @param request is the textual format of client's request\r\n     */\r\n    private void checkStartRequest(String request) {\r\n        if (request.equals(LobbyCommand.getStartRequestMessage())) {\r\n            if (server.allowStart()) {\r\n                server.notifyObservers(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.startConfirmation)));\r\n                server.setGameStarted(true);\r\n            } else\r\n                notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.startRefusal)));\r\n        }\r\n        else\r\n            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.badInput)));\r\n    }\r\n\r\n    /**\r\n     * Brief Analyzes a message received from the client connected to this socket, sending it back an answer\r\n     * @param message is the message sent by the client\r\n     */\r\n    private void analyzeClientMessage(Object message){\r\n        if(message instanceof TextMessage){\r\n            handleMessage((TextMessage) message);\r\n        }\r\n        else if (message instanceof GameMessage) {\r\n            handleMessage((GameMessage) message);\r\n        }\r\n        else notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitTurn)));\r\n    }\r\n\r\n    private void handleMessage(GameMessage message) {\r\n        if(!server.isGameStarted())\r\n            handlePlayerUsername((String) message.getData().get(0));\r\n        else\r\n            server.receive(message);\r\n    }\r\n\r\n    private void handleMessage(TextMessage message) {\r\n        if (!server.isGameStarted()) {\r\n            if (notifier.playerId.equals(ServerNetworkHandler.getHostId())) {\r\n                String request = message.getContent();\r\n                try{\r\n                    checkSizeChangeRequest(request);\r\n                } catch (NumberFormatException e){\r\n                    checkStartRequest(request);\r\n                }\r\n            }\r\n            else\r\n                notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitStart)));\r\n        }\r\n        else\r\n            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitTurn)));\r\n    }\r\n\r\n    /**\r\n     * Brief Creates the streams to communicate with the client or closes the connection if something goes wrong\r\n     */\r\n    private void createStreams() {\r\n        try {\r\n            outputStream = new ObjectOutputStream(clientSocket.getOutputStream());\r\n            inputStream = new ObjectInputStream(clientSocket.getInputStream());\r\n        } catch (IOException e) {\r\n            closeConnection(false);\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Reads whatever the client sends, shutting down the connection if the client disconnects both with an explicit request and without sending anything\r\n     */\r\n    private void read() {\r\n        try {\r\n            while (true) {\r\n                Object message = inputStream.readObject();\r\n                if(message instanceof QuitMessage)\r\n                    break;\r\n                else\r\n                    analyzeClientMessage(message);\r\n            }\r\n        } catch(IOException e) {\r\n            System.out.println(ConnectionMessage.socketCloseConnectionMessage);\r\n        } catch (ClassNotFoundException ignored){\r\n        } finally {\r\n            if(!clientSocket.isClosed())\r\n                closeConnection(false);\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Establishes a communication with the client, then interacts with it\r\n     */\r\n    @Override\r\n    public void run() {\r\n        createStreams();\r\n        //player log-in\r\n        notifier.update(new GameMessage(MethodHeading.intValueOf(MethodHeading.USERNAME), false, Collections.singletonList(notifier.playerId)));\r\n\r\n        read();\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/controller/server/ClientConnectionSocket.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/controller/server/ClientConnectionSocket.java	(date 1593646805695)
+@@ -4,6 +4,7 @@
+ import it.polimi.ingsw.santorini.controller.exceptions.NameAlreadyTakenException;
+ import it.polimi.ingsw.santorini.controller.utils.ConnectionMessage;
+ import it.polimi.ingsw.santorini.controller.utils.LobbyCommand;
++import it.polimi.ingsw.santorini.communication.NetworkMessage;
+ 
+ import java.io.IOException;
+ import java.io.ObjectInputStream;
+@@ -61,7 +62,7 @@
+     private final Socket clientSocket;
+     private ObjectInputStream inputStream;
+     private ObjectOutputStream outputStream;
+-    private final ClientConnectionSocket.Notifier notifier;
++    private final Notifier notifier;
+ 
+     /**
+      * Brief Creates the socket for the communication with client, then registers itself in the observers' list
+@@ -103,10 +104,10 @@
+             throw new NameAlreadyTakenException();
+         server.addName(notifier.playerId, playerName);
+         sendCommandsList(false);
+-        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.host)));
+-        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.demandInput)));
++        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(NetworkMessage.host.ordinal()));
++        server.send(ServerNetworkHandler.getHostId(), new LobbyMessage(NetworkMessage.demandInput.ordinal()));
+         for(int clientId = ServerNetworkHandler.getHostId() + 1; clientId <= server.getActiveNames().size(); clientId++){
+-            server.send(clientId, new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitStart)));
++            server.send(clientId, new LobbyMessage(NetworkMessage.waitStart.ordinal()));
+         }
+     }
+ 
+@@ -145,10 +146,10 @@
+         Integer size = Integer.parseInt(request);
+         if (server.setLobbyDimension(size)) {
+             sendCommandsList(true);
+-            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.sizeChanged)));
++            notifier.update(new LobbyMessage(NetworkMessage.sizeChanged.ordinal()));
+         }
+         else
+-            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.sizeNotChanged)));
++            notifier.update(new LobbyMessage(NetworkMessage.sizeNotChanged.ordinal()));
+     }
+ 
+     /**
+@@ -158,13 +159,13 @@
+     private void checkStartRequest(String request) {
+         if (request.equals(LobbyCommand.getStartRequestMessage())) {
+             if (server.allowStart()) {
+-                server.notifyObservers(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.startConfirmation)));
++                server.notifyObservers(new LobbyMessage(NetworkMessage.startConfirmation.ordinal()));
+                 server.setGameStarted(true);
+             } else
+-                notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.startRefusal)));
++                notifier.update(new LobbyMessage(NetworkMessage.startRefusal.ordinal()));
+         }
+         else
+-            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.badInput)));
++            notifier.update(new LobbyMessage(NetworkMessage.badInput.ordinal()));
+     }
+ 
+     /**
+@@ -178,7 +179,7 @@
+         else if (message instanceof GameMessage) {
+             handleMessage((GameMessage) message);
+         }
+-        else notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitTurn)));
++        else notifier.update(new LobbyMessage(NetworkMessage.waitTurn.ordinal()));
+     }
+ 
+     private void handleMessage(GameMessage message) {
+@@ -199,10 +200,10 @@
+                 }
+             }
+             else
+-                notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitStart)));
++                notifier.update(new LobbyMessage(NetworkMessage.waitStart.ordinal()));
+         }
+         else
+-            notifier.update(new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.waitTurn)));
++            notifier.update(new LobbyMessage(NetworkMessage.waitTurn.ordinal()));
+     }
+ 
+     /**
+Index: src/main/java/it/polimi/ingsw/santorini/model/gameoperations/GameOperationsExecutor.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.model.gameoperations;\r\n\r\nimport it.polimi.ingsw.santorini.model.*;\r\nimport it.polimi.ingsw.santorini.model.gameoperations.expansion.Expansion;\r\nimport it.polimi.ingsw.santorini.model.gameoperations.result.GameOperationResult;\r\nimport it.polimi.ingsw.santorini.model.gameoperations.state.GameState;\r\nimport it.polimi.ingsw.santorini.model.gameoperations.state.immutable.ImmutableGameState;\r\n\r\nimport static it.polimi.ingsw.santorini.model.gameoperations.GameMarker.*;\r\n\r\nimport java.util.*;\r\nimport java.util.function.Consumer;\r\nimport java.util.function.Predicate;\r\n\r\n/**\r\n * Brief Represents a GameOperation executor that ca handle multiple operations in a row. It is responsible of\r\n * applying the results from operation to operation and handling wins and losses\r\n */\r\npublic class GameOperationsExecutor {\r\n\r\n    private Player currentPlayer;\r\n    private GameState gameState;\r\n    private GameOperationResult lastResult;\r\n    private Boolean abortNextOperations = false;\r\n    private Boolean skippedWorkerSelection = false;\r\n\r\n    private List<GameOperation<?,?>> operations;\r\n    private ImmutableGameState stateBackup;\r\n    private GameDelegate delegate;\r\n    private Consumer<Boolean> onCompletion;\r\n    private Boolean win = false;\r\n\r\n    /**\r\n     * Brief Executes all the operations for a single turn of the game\r\n     * @param operations are the operation to execute\r\n     * @param currentPlayer is the player who is currently playing the turn\r\n     * @param gameState is the state of the game\r\n     * @param onCompletion called when completed with the win report of current player\r\n     */\r\n    public void executeOperations(List<GameOperation<?,?>> operations, Player currentPlayer, GameState gameState, Consumer<Boolean> onCompletion) {\r\n        reset(currentPlayer, gameState, operations, onCompletion);\r\n        generateBackup();\r\n        executeLoop();\r\n    }\r\n\r\n    /**\r\n     * Brief executes the turn\r\n     */\r\n    private void executeLoop() {\r\n        for (int index = 0; index < operations.size() && !abortNextOperations; index++) {\r\n            GameOperation<?, ?> operation = operations.get(index);\r\n            if (!(lastResult.getWasSkipped() && operation.isOptional())) {\r\n                setupExecution(operation);\r\n                executeOperation(operation);\r\n            }\r\n        }\r\n        endExecution();\r\n    }\r\n\r\n    /**\r\n     * Brief aborts the next operations' computing\r\n     */\r\n    private void abortNextOperations() {\r\n        abortNextOperations = true;\r\n    }\r\n\r\n    /**\r\n     * Brief flushes the expansions targeting current player to allow a correct execution of the next turn\r\n     */\r\n    private void flushExpansions() {\r\n        removeExpansions(filterByDefaultMarker());\r\n        removeExpansions(filterByTarget(currentPlayer));\r\n        removeExpansions(filterByTrueMark());\r\n    }\r\n\r\n    /**\r\n     * Brief ends the execution of the turn\r\n     */\r\n    private void endExecution() {\r\n        if (victory()) deployResult();\r\n        else requestUndoOrConfirm();\r\n    }\r\n\r\n    /**\r\n     * Brief Asking the player for undo or confirmation of the turn\r\n     */\r\n    private void requestUndoOrConfirm() {\r\n        delegate.requestUndoOrConfirm(undo -> {\r\n            if (undo) undo();\r\n            else endTurn();\r\n        });\r\n    }\r\n\r\n    /**\r\n     * Brief ends officially the turn\r\n     */\r\n    private void endTurn() {\r\n        delegate.onTurnOver();\r\n        deployResult();\r\n    }\r\n\r\n    /**\r\n     * Brief deploys the result after flushing the expansions\r\n     * @param win the win report of the current player\r\n     */\r\n    private void deployResult(Boolean win) {\r\n        flushExpansions();\r\n        if (onCompletion != null) onCompletion.accept(win);\r\n    }\r\n\r\n    /**\r\n     * Brief deploys the result\r\n     */\r\n    private void deployResult() {\r\n        deployResult(win);\r\n    }\r\n\r\n    /**\r\n     * Brief Undo feature: it restores the initial state and starts a new clean turn execution\r\n     */\r\n    private void undo() {\r\n        restore();\r\n        executeLoop();\r\n    }\r\n\r\n    /**\r\n     * Brief restores the initial state (at the beginning of the turn)\r\n     */\r\n    private void restore() {\r\n        resetVariables();\r\n        restoreBackup();\r\n    }\r\n\r\n    /**\r\n     * Brief restores the initial game state and the initial expansions\r\n     */\r\n    private void restoreBackup() {\r\n        restoreGameState();\r\n        restoreExpansions();\r\n        delegate.onBoardChanged(GameMap.getBoard(), null);\r\n        delegate.onTurnOver();\r\n    }\r\n\r\n    /**\r\n     * Brief restores the initial expansions\r\n     */\r\n    private void restoreExpansions() {\r\n        List<Expansion<?,GameMarker>> expansions = lastResult.expansionRules().getAllExpansions();\r\n        if (expansions != null) expansions.removeIf(expansion -> {\r\n            List<GameMarker> markers = expansion.getMarkers();\r\n            if (markers != null)\r\n                for (GameMarker marker : markers)\r\n                    if (marker.getMark()) return false;\r\n            return true;\r\n        });\r\n    }\r\n\r\n    /**\r\n     * Brief restores the initial game state\r\n     */\r\n    private void restoreGameState() {\r\n        gameState = stateBackup.getMutable();\r\n        delegate.onBoardChanged(GameMap.getBoard(), null);\r\n    }\r\n\r\n    /**\r\n     * Brief generates the backup at the start of the turn\r\n     */\r\n    private void generateBackup() {\r\n        this.stateBackup = new ImmutableGameState(gameState);\r\n        markEarlyExpansions();\r\n    }\r\n\r\n    /**\r\n     * Brief resets the main parameters at the start of the turn\r\n     * @param operations are the operation to execute\r\n     * @param currentPlayer is the player who is currently playing the turn\r\n     * @param gameState is the state of the game\r\n     * @param onCompletion called when completed with the win report of current player\r\n     */\r\n    private void reset(Player currentPlayer, GameState gameState, List<GameOperation<?,?>> operations, Consumer<Boolean> onCompletion) {\r\n        this.currentPlayer = currentPlayer;\r\n        this.gameState = gameState;\r\n        setupGameStateCurrentPlayer();\r\n        this.operations = operations;\r\n        this.onCompletion = onCompletion;\r\n        this.delegate = gameState.getDelegate();\r\n        generateLastResult();\r\n        resetVariables();\r\n    }\r\n\r\n    /**\r\n     * Brief resets the main variables at the start of the turn\r\n     */\r\n    private void resetVariables() {\r\n        win = false;\r\n        abortNextOperations = false;\r\n        skippedWorkerSelection = false;\r\n        lastResult.setWinReport(null);\r\n        lastResult.setWasSkipped(null);\r\n        lastResult.setAbortNextOperations(false);\r\n        lastResult.setActiveWorker(null);\r\n        lastResult.setActivePosition(null);\r\n    }\r\n\r\n    /**\r\n     * Brief generates a fresh last result storing\r\n     */\r\n    private void generateLastResult() {\r\n        if (lastResult == null) lastResult = new GameOperationResult();\r\n    }\r\n\r\n    /**\r\n     * Brief marks the early expansions to allow expansions recovery afterwards\r\n     */\r\n    private void markEarlyExpansions() {\r\n        List<Expansion<?,GameMarker>> expansions = lastResult.expansionRules().getAllExpansions();\r\n        if (expansions != null) expansions.forEach(expansion -> expansion.getMarkers().add(earlyMarker()));\r\n    }\r\n\r\n    /**\r\n     * Brief the marker used to mark early expansions\r\n     */\r\n    private GameMarker earlyMarker() {\r\n        return new GameMarker(true);\r\n    }\r\n\r\n    /**\r\n     * Brief Sets up the parameters needed for the execution of the operation\r\n     */\r\n    private void setupExecution(GameOperation<?,?> operation) {\r\n        applyLastResult(operation);\r\n        if (skippedWorkerSelection) skippedWorkerSelectionCorrection(operation);\r\n    }\r\n\r\n    /**\r\n     * Brief Applies the last result to the current operation\r\n     * @param operation is the operation to be executed\r\n     */\r\n    private void applyLastResult(GameOperation<?,?> operation) {\r\n        setupGameState();\r\n        setupGameOperation(operation);\r\n    }\r\n\r\n    /**\r\n     * Brief Updates abortNextOperation in order to eventually stop the operation's execution flow\r\n     */\r\n    private void updateAbortNextOperations() {\r\n        if (!abortNextOperations) abortNextOperations = lastResult.getAbortNextOperations();\r\n    }\r\n\r\n    /**\r\n     * Brief Sets the current player in the state of the game\r\n     */\r\n    private void setupGameStateCurrentPlayer() {\r\n        gameState.setCurrentPlayer(currentPlayer);\r\n    }\r\n\r\n    /**\r\n     * Brief Sets the active worker and the active position basing on the result of the last operation\r\n     */\r\n    private void setupGameState() {\r\n        gameState.setActiveWorker(lastResult.getActiveWorker());\r\n        gameState.setActivePosition(lastResult.getActivePosition());\r\n    }\r\n\r\n    /**\r\n     * Brief Sets up the rules for the next operation basing on the results of the last one executed\r\n     * @param operation is the next operation to be executed\r\n     */\r\n    private void setupGameOperation(GameOperation<?,?> operation) {\r\n        operation.expandRules(lastResult.expansionRules());\r\n    }\r\n\r\n    /**\r\n     * Brief Checks if the current players is a winner or a loser\r\n     */\r\n    private void handleWinReport() {\r\n        win = lastResult.getWinReport();\r\n        if (win != null) {\r\n            if (!win) removeCurrentPlayerExpansions();\r\n            abortNextOperations();\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Removes all current player's expansions (used to disable its effects from next turn)\r\n     */\r\n    private void removeCurrentPlayerExpansions() {\r\n        removeExpansions(filterByOwner(currentPlayer));\r\n        removeExpansions(filterByTarget(currentPlayer));\r\n    }\r\n\r\n    /**\r\n     * Brief Executes the operation passed to the function\r\n     * @param operation is the operation to be executed\r\n     */\r\n    private void executeOperation(GameOperation<?,?> operation) {\r\n        operation.execute(gameState, (result) -> {\r\n            skippedWorkerSelectionCheck(operation, result);\r\n            afterExecution(result);\r\n        });\r\n    }\r\n\r\n    /**\r\n     * Brief Updates the executor state based on the last execution\r\n     */\r\n    private void afterExecution(GameOperationResult result) {\r\n        lastResult = result;\r\n        handleWinReport();\r\n        updateAbortNextOperations();\r\n    }\r\n\r\n    /**\r\n     * Brief Requires worker selection if it was previously skipped\r\n     * @param operation is the operation to be executed\r\n     */\r\n    private void skippedWorkerSelectionCorrection(GameOperation<?,?> operation) {\r\n        operation.requiresWorkerSelection();\r\n        skippedWorkerSelection = false;\r\n    }\r\n\r\n    /**\r\n     * Brief Checks if worker selection was previously skipped and updates accordingly skippedWorkerSelection\r\n     * @param operation is the executed operation\r\n     * @param result the last result\r\n     */\r\n    private void skippedWorkerSelectionCheck(GameOperation<?,?> operation, GameOperationResult result) {\r\n        if (operation.getRequiresWorkerSelection() && result.getWasSkipped()) skippedWorkerSelection = true;\r\n    }\r\n\r\n    /**\r\n     * Brief Removes the undesired expansions from the last result's rules\r\n     * @param undesired is the condition used to filter the undesired expansions\r\n     */\r\n    private void removeExpansions(Predicate<GameMarker> undesired) {\r\n        lastResult.expansionRules().removeExpansionsByFilter(undesired);\r\n    }\r\n\r\n    /**\r\n     * Brief ends the execution of the turn\r\n     * @return Boolean true if the player is victorious, false otherwise\r\n     */\r\n    private Boolean victory() {\r\n        return win != null ? win : false;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/model/gameoperations/GameOperationsExecutor.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/model/gameoperations/GameOperationsExecutor.java	(date 1593646839053)
+@@ -77,10 +77,18 @@
+      * Brief ends the execution of the turn
+      */
+     private void endExecution() {
+-        if (victory()) deployResult();
++        if (victory()) endTurn();
+         else requestUndoOrConfirm();
+     }
+ 
++    /**
++     * Brief ends the execution of the turn
++     * @return Boolean true if the player is victorious, false otherwise
++     */
++    private Boolean victory() {
++        return win != null ? win : false;
++    }
++
+     /**
+      * Brief Asking the player for undo or confirmation of the turn
+      */
+@@ -197,10 +205,7 @@
+         abortNextOperations = false;
+         skippedWorkerSelection = false;
+         lastResult.setWinReport(null);
+-        lastResult.setWasSkipped(null);
+         lastResult.setAbortNextOperations(false);
+-        lastResult.setActiveWorker(null);
+-        lastResult.setActivePosition(null);
+     }
+ 
+     /**
+@@ -336,12 +341,4 @@
+     private void removeExpansions(Predicate<GameMarker> undesired) {
+         lastResult.expansionRules().removeExpansionsByFilter(undesired);
+     }
+-
+-    /**
+-     * Brief ends the execution of the turn
+-     * @return Boolean true if the player is victorious, false otherwise
+-     */
+-    private Boolean victory() {
+-        return win != null ? win : false;
+-    }
+ }
+Index: src/main/java/it/polimi/ingsw/santorini/controller/server/ServerNetworkHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.controller.server;\r\n\r\nimport it.polimi.ingsw.santorini.communication.*;\r\nimport it.polimi.ingsw.santorini.controller.CardLoader;\r\nimport it.polimi.ingsw.santorini.controller.Controller;\r\nimport it.polimi.ingsw.santorini.controller.MessageReceiver;\r\nimport it.polimi.ingsw.santorini.controller.utils.ConnectionMessage;\r\nimport it.polimi.ingsw.santorini.controller.utils.LobbyCommand;\r\nimport it.polimi.ingsw.santorini.communication.NetworkMessage;\r\nimport it.polimi.ingsw.santorini.model.*;\r\n\r\nimport java.io.IOException;\r\nimport java.net.ServerSocket;\r\nimport java.net.Socket;\r\nimport java.net.SocketTimeoutException;\r\nimport java.util.*;\r\nimport java.util.concurrent.ExecutorService;\r\nimport java.util.concurrent.Executors;\r\n\r\n/**\r\n * Brief Singleton handling the server network by a list of observers\r\n */\r\npublic class ServerNetworkHandler extends Observable<Object> {\r\n    private static ServerNetworkHandler instance;\r\n    private Integer port;\r\n    private ServerSocket serverSocket;\r\n    private ExecutorService executor;\r\n    private volatile Boolean gameStarted;\r\n    private final List<String> activeNames;\r\n    private MessageReceiver receiver;\r\n    private final Object gameStatusLock = new Object();\r\n\r\n    /**\r\n     * Brief Sets all the server's parameters and creates a new ExecutorService to execute all the interactions with each client\r\n     */\r\n    private ServerNetworkHandler(){\r\n        executor = Executors.newFixedThreadPool(MAX_CAPABILITY);\r\n        gameStarted = false;\r\n        activeNames = new ArrayList<>(MAX_CAPABILITY);\r\n        initializeNames();\r\n    }\r\n\r\n    public static ServerNetworkHandler getInstance(){\r\n        if(instance == null)\r\n            instance = new ServerNetworkHandler();\r\n        return instance;\r\n    }\r\n\r\n    /**\r\n     * Brief Removes all the names already contained in the list of connected players' names and initializes it with an empty value\r\n     */\r\n    private void initializeNames(){\r\n        if(!activeNames.isEmpty())\r\n            activeNames.removeAll(Collections.unmodifiableList(activeNames));\r\n        for(int i = 0; i < getMaxCapability(); i++)\r\n            activeNames.add(\"\");\r\n    }\r\n\r\n    /**\r\n     * @return true if the number of players is correct and the game can consequently start\r\n     */\r\n    protected boolean allowStart(){\r\n        return getObserversNumber().equals(CURRENT_CAPABILITY) && getActiveNames().size() == CURRENT_CAPABILITY;\r\n    }\r\n\r\n    /**\r\n     * Brief Sends a message to a client or to all the connected clients\r\n     * @implNote the id must be subtracted by 1 because of the adopted convention about the players' ids that start from 1 instead of 0\r\n     * @param clientId is the id of the client that will receive the message\r\n     * @param message is the message to send\r\n     */\r\n    public void send(Integer clientId, Object message){\r\n        try {\r\n            if (message instanceof GameMessage && ((GameMessage) message).isBroadcast())\r\n                notifyObservers(message);\r\n            else\r\n                notifyObservers(clientId - 1, message);\r\n        } catch (ArrayIndexOutOfBoundsException ignored){\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Sends a message to all the players except the current playing one\r\n     * @param message is the message to send\r\n     * @param id is the id of the player who mustn't receive the message\r\n     */\r\n    public void sendToWaitingPlayers(Object message, Integer id){\r\n        for(Player p : PlayersHandler.getPlayers())\r\n            if(!p.getId().equals(id))\r\n                send(p.getId(), message);\r\n    }\r\n\r\n    /**\r\n     * Brief Receives a message and, if the message is a broadcast one, forwards it to the other clients\r\n     * @param message is the received message\r\n     */\r\n    public void receive(GameMessage message){\r\n        new Thread(() -> {\r\n            if(message.isBroadcast())   //forwards the message\r\n                send(null, new GameMessage(-1, message.isBroadcast(), message.getData()));\r\n            receiver.receive(message);\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Creates the server and connects it to the clients on a certain specified port\r\n     * @param port is the port through which the communication takes place\r\n     */\r\n    public void startServer(Integer port){\r\n        this.port = port;\r\n        createServer();\r\n        new Thread(() -> {\r\n            while (true){\r\n                loadCardsAndMap();\r\n                //lobby formation\r\n                System.out.println(ConnectionMessage.serverWaitingMessage);\r\n                while (!gameStarted) {\r\n                    try {\r\n                        listen();\r\n                    } catch (IOException ignored) {\r\n                    }\r\n                }\r\n                //game starting\r\n                startGame();\r\n                waitEndGame();\r\n            }\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Waits for the end of the game\r\n     */\r\n    private void waitEndGame() {\r\n        synchronized (gameStatusLock) {\r\n            try {\r\n                gameStatusLock.wait();\r\n            } catch (InterruptedException ignored) {\r\n            }\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Creates the server, closing the application if something went wrong with the creation process\r\n     */\r\n    private void createServer(){\r\n        try {\r\n            serverSocket = new ServerSocket(port);\r\n        } catch (IOException e){\r\n            System.out.println(ConnectionMessage.serverCreationErrorMessage);\r\n            System.exit(-1);\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Makes the server waiting for the receiving of a connection request from a client\r\n     */\r\n    private void listen() throws IOException {\r\n        Socket clientSocket = null;\r\n        int TIMEOUT = 1000; //[ms]\r\n\r\n        try {\r\n            serverSocket.setSoTimeout(TIMEOUT);\r\n            //refusing of any other incoming connections\r\n            while (getObserversNumber().equals(CURRENT_CAPABILITY) && getObserversNumber() >= MIN_NUMOF_PLAYERS)\r\n                clientSocket = serverSocket.accept();\r\n            //TCP connection opening\r\n            if (clientSocket == null)\r\n                clientSocket = serverSocket.accept();\r\n            //client connection\r\n            if (getObserversNumber() < CURRENT_CAPABILITY)\r\n                connectToClient(clientSocket);\r\n        } catch (SocketTimeoutException e) {\r\n            serverSocket.setSoTimeout(0);\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Starts a new game on a separate thread, sending to each client the parameters needed for the setup\r\n     */\r\n    private void startGame(){\r\n        notifyObservers(new GameMessage(MethodHeading.intValueOf(MethodHeading.PARAMS), true, Arrays.asList(GameMap.getDefaultHeight(), GameMap.getDefaultWidth(), getActiveNames())));\r\n        new Thread(() -> {\r\n            TurnBasedGame game = new SantoriniGame(new Controller(), CURRENT_CAPABILITY);\r\n            try {\r\n                game.setupGame();\r\n                game.startGame();\r\n            } catch (IndexOutOfBoundsException ignored){\r\n            }\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Loads the map and the game cards in a separated thread\r\n     */\r\n    private void loadCardsAndMap() {\r\n        new Thread(() -> {\r\n            CardLoader.loadCards();\r\n            SantoriniGame.createMap();\r\n        }).start();\r\n    }\r\n\r\n    /**\r\n     * Brief Connects the server to the corresponding client's socket, executing the interaction between the two parties\r\n     * @param socket is the socket linked to the client\r\n     */\r\n    private void connectToClient(Socket socket){\r\n        ClientConnectionSocket client = new ClientConnectionSocket(this, socket);\r\n        System.out.println(ConnectionMessage.successfulConnectionMessage);\r\n        //client communication starting\r\n        executor.submit(client);\r\n        if(getObserversNumber() < CURRENT_CAPABILITY)\r\n            System.out.println(ConnectionMessage.serverWaitingMessage);\r\n    }\r\n\r\n    /**\r\n     * Brief Removes a specific connection between server and client\r\n     * @implNote the id must be subtracted by 1 because of the adopted convention about the players' ids that start from 1 instead of 0\r\n     * @param observer is the connection to remove from the server\r\n     * @param onKickedPlayer is true if the disconnection takes place during the kick of a player\r\n     */\r\n    protected void disconnect(Observer<Object> observer, Integer id, boolean onKickedPlayer) {\r\n        String disconnectedPlayerName = activeNames.get(id - 1);\r\n        if(!isGameStarted() || onKickedPlayer) {  //if server is still in lobby phase\r\n            unregisterClient(observer, disconnectedPlayerName);\r\n            if(!onKickedPlayer)\r\n                notifyClients(disconnectedPlayerName);\r\n        } else {\r\n            notifyObservers(new QuitMessage());\r\n            new Thread(this::restartServer).start();\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Unregister the disconnected client and updates the list of active names\r\n     * @param observer is the client who has just disconnected\r\n     * @param disconnectedPlayerName is the name of the client who has just disconnected\r\n     */\r\n    private void unregisterClient(Observer<Object> observer, String disconnectedPlayerName){\r\n        activeNames.remove(disconnectedPlayerName);\r\n        activeNames.add(\"\");\r\n        unregisterObserver(observer);\r\n        updateObserversIds();\r\n    }\r\n\r\n    /**\r\n     * Brief Notifies the clients still connected to the server about the just occurred disconnection\r\n     * @param disconnectedPlayerName is the name of the player who has just disconnected\r\n     */\r\n    private void notifyClients(String disconnectedPlayerName){\r\n        send(HOST_ID, new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYCOMMANDS), Arrays.asList(LobbyCommand.getLobbyCommands(), LobbyCommand.getCommandsHelpingText())));\r\n        notifyObservers(new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYLIST), Collections.singletonList(getActiveNames())));\r\n        notifyObservers(new TextMessage(ConnectionMessage.clientDisconnectionMessage + disconnectedPlayerName));\r\n        send(HOST_ID, new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.host)));\r\n    }\r\n\r\n    /**\r\n     * Brief Restarts the server by unregistering all the listening observers and by reinitializing the needed parameters\r\n     */\r\n    private void restartServer() {\r\n        unregisterAllObservers();\r\n        initializeNames();\r\n        try {\r\n            TurnBasedGame.endGame();\r\n        } catch (RuntimeException ignored){\r\n        }\r\n        executor.shutdownNow();\r\n        executor = Executors.newFixedThreadPool(MAX_CAPABILITY);\r\n        receiver = new MessageReceiver();\r\n        CURRENT_CAPABILITY = MIN_NUMOF_PLAYERS;\r\n        //enabling new lobby formation at the end of the game\r\n        gameStarted = false;\r\n        synchronized (gameStatusLock){\r\n            gameStatusLock.notifyAll();\r\n        }\r\n        System.gc();    //suggesting to make a garbage collection\r\n    }\r\n\r\n    /**\r\n     * @return the list of clients' names connected to the server\r\n     */\r\n    public List<String> getActiveNames() {\r\n        List<String> names = new ArrayList<>();\r\n        for(String name : activeNames)\r\n            if(name.length() > 0)\r\n                names.add(name);\r\n        return names;\r\n    }\r\n\r\n    public void addName(Integer id, String name){\r\n        activeNames.set(id - 1, name);\r\n    }\r\n\r\n    public synchronized boolean isGameStarted() {\r\n        return gameStarted;\r\n    }\r\n\r\n    public void setGameStarted(boolean gameStarted) {\r\n        this.gameStarted = gameStarted;\r\n    }\r\n\r\n    /**\r\n     * Brief Resizes lobby's capability if it has a legit value and if the resize doesn't entail to kick a client\r\n     * @param dimension is the new wanted dimension's value\r\n     * @return true if the size has been successfully changed\r\n     */\r\n    public synchronized boolean setLobbyDimension(Integer dimension) {\r\n        if((MIN_NUMOF_PLAYERS <= dimension && dimension <= MAX_CAPABILITY) && (getObserversNumber() <= dimension) && !dimension.equals(CURRENT_CAPABILITY)){\r\n            CURRENT_CAPABILITY = dimension;\r\n            return true;\r\n        }\r\n        return false;\r\n    }\r\n\r\n    public static Integer getHostId() {\r\n        return HOST_ID;\r\n    }\r\n\r\n    public static Integer getMinCapability(){\r\n        return MIN_NUMOF_PLAYERS;\r\n    }\r\n\r\n    public static Integer getActualCapability() { return CURRENT_CAPABILITY;}\r\n\r\n    public static Integer getMaxCapability(){\r\n        return MAX_CAPABILITY;\r\n    }\r\n\r\n    public void setReceiver(MessageReceiver receiver) {\r\n        this.receiver = receiver;\r\n    }\r\n\r\n    /**\r\n     * @return a list containing the ids of all the clients connected to the server\r\n     */\r\n    public List<Integer> getClientsIds(){\r\n        List<Integer> ids = new ArrayList<>();\r\n        for(int i = HOST_ID; i <= getObserversNumber(); i++)\r\n            ids.add(i);\r\n        return ids;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/controller/server/ServerNetworkHandler.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/controller/server/ServerNetworkHandler.java	(date 1593646839077)
+@@ -250,7 +250,7 @@
+         send(HOST_ID, new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYCOMMANDS), Arrays.asList(LobbyCommand.getLobbyCommands(), LobbyCommand.getCommandsHelpingText())));
+         notifyObservers(new LobbyMessage(MethodHeading.intValueOf(MethodHeading.LOBBYLIST), Collections.singletonList(getActiveNames())));
+         notifyObservers(new TextMessage(ConnectionMessage.clientDisconnectionMessage + disconnectedPlayerName));
+-        send(HOST_ID, new LobbyMessage(NetworkMessage.intValueOf(NetworkMessage.host)));
++        send(HOST_ID, new LobbyMessage(NetworkMessage.host.ordinal()));
+     }
+ 
+     /**
+Index: .idea/artifacts/server_jar.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/artifacts/server_jar.xml	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ .idea/artifacts/server_jar.xml	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
+@@ -1,25 +0,0 @@
+-<component name="ArtifactManager">
+-  <artifact type="jar" build-on-make="true" name="server:jar">
+-    <output-path>$PROJECT_DIR$/out/artifacts/server_jar</output-path>
+-    <root id="archive" name="ing-sw-2020-cojocaru-colasanti-d-angelo.jar">
+-      <element id="directory" name="META-INF">
+-        <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/server/META-INF/MANIFEST.MF" />
+-      </element>
+-      <element id="module-output" name="ing-sw-2020-cojocaru-colasanti-d-angelo" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-media/14.0.1/javafx-media-14.0.1-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/11.0.2/javafx-controls-11.0.2.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-base/11.0.2/javafx-base-11.0.2-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/11.0.2/javafx-controls-11.0.2-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-engine/5.6.1/junit-jupiter-engine-5.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-api/5.6.1/junit-jupiter-api-5.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-base/11.0.2/javafx-base-11.0.2.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apiguardian/apiguardian-api/1.1.0/apiguardian-api-1.1.0.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-commons/1.6.1/junit-platform-commons-1.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-engine/1.6.1/junit-platform-engine-1.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-media/14.0.1/javafx-media-14.0.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/11.0.2/javafx-graphics-11.0.2-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/11.0.2/javafx-graphics-11.0.2.jar" path-in-jar="/" />
+-    </root>
+-  </artifact>
+-</component>
+\ No newline at end of file
+Index: src/main/resources/server/META-INF/MANIFEST.MF
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/server/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/resources/server/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
+@@ -1,3 +0,0 @@
+-Manifest-Version: 1.0
+-Main-Class: it.polimi.ingsw.santorini.ServerApp
+-
+Index: .idea/artifacts/client_jar.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/artifacts/client_jar.xml	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ .idea/artifacts/client_jar.xml	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
+@@ -1,25 +0,0 @@
+-<component name="ArtifactManager">
+-  <artifact type="jar" build-on-make="true" name="client:jar">
+-    <output-path>$PROJECT_DIR$/out/artifacts/client_jar</output-path>
+-    <root id="archive" name="ing-sw-2020-cojocaru-colasanti-d-angelo.jar">
+-      <element id="directory" name="META-INF">
+-        <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/client/META-INF/MANIFEST.MF" />
+-      </element>
+-      <element id="module-output" name="ing-sw-2020-cojocaru-colasanti-d-angelo" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-media/14.0.1/javafx-media-14.0.1-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/11.0.2/javafx-controls-11.0.2.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-base/11.0.2/javafx-base-11.0.2-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/11.0.2/javafx-controls-11.0.2-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-engine/5.6.1/junit-jupiter-engine-5.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter-api/5.6.1/junit-jupiter-api-5.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-base/11.0.2/javafx-base-11.0.2.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apiguardian/apiguardian-api/1.1.0/apiguardian-api-1.1.0.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-commons/1.6.1/junit-platform-commons-1.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/junit/platform/junit-platform-engine/1.6.1/junit-platform-engine-1.6.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-media/14.0.1/javafx-media-14.0.1.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/11.0.2/javafx-graphics-11.0.2-win.jar" path-in-jar="/" />
+-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/11.0.2/javafx-graphics-11.0.2.jar" path-in-jar="/" />
+-    </root>
+-  </artifact>
+-</component>
+\ No newline at end of file
+Index: src/main/java/server/META-INF/MANIFEST.MF
+===================================================================
+--- src/main/java/server/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/server/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
+@@ -1,3 +0,0 @@
+-Manifest-Version: 1.0
+-Main-Class: it.polimi.ingsw.santorini.ServerApp
+-
+Index: src/main/resources/client/META-INF/MANIFEST.MF
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/client/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/resources/client/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
+@@ -1,3 +0,0 @@
+-Manifest-Version: 1.0
+-Main-Class: it.polimi.ingsw.santorini.ClientApp
+-
+Index: src/main/java/client/META-INF/MANIFEST.MF
+===================================================================
+--- src/main/java/client/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/client/META-INF/MANIFEST.MF	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
+@@ -1,3 +0,0 @@
+-Manifest-Version: 1.0
+-Main-Class: it.polimi.ingsw.santorini.ClientApp
+-
+Index: src/test/java/it/polimi/ingsw/santorini/model/AtlasHephaestusPrometheusTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.model;\r\n\r\nimport it.polimi.ingsw.santorini.controller.CardLoader;\r\nimport it.polimi.ingsw.santorini.testing.controller.TestingController;\r\nimport it.polimi.ingsw.santorini.testing.view.TestingView;\r\nimport org.junit.jupiter.api.BeforeAll;\r\nimport org.junit.jupiter.api.Test;\r\nimport org.junit.jupiter.api.TestInstance;\r\n\r\nimport java.util.ArrayList;\r\nimport java.util.Arrays;\r\nimport java.util.Collections;\r\n\r\nimport static org.junit.jupiter.api.Assertions.*;\r\n\r\n@TestInstance(TestInstance.Lifecycle.PER_CLASS)\r\npublic class AtlasHephaestusPrometheusTest {\r\n    GameDelegate delegate;\r\n    SantoriniGame game;\r\n    PlayersHandler playersHandler;\r\n    Integer numberOfPlayers;\r\n    TestingView testingView;\r\n\r\n    @BeforeAll\r\n    void init(){\r\n        numberOfPlayers = 3;\r\n        delegate = new TestingController();\r\n        game = new SantoriniGame(delegate, numberOfPlayers);\r\n        SantoriniGame.createMap();\r\n        CardLoader.loadCards();\r\n        playersHandler = game.getPlayersHandler();\r\n        testingView = TestingController.getTestingView();\r\n        testingView.setGameMode(2);\r\n        testingView.setNumOfPlayers(numberOfPlayers);\r\n    }\r\n\r\n    @Test\r\n    void test(){\r\n        Integer selectedCardId1 = 6, selectedCardId2 = 10, selectedCardId3 = 4;\r\n        ArrayList<Player> players;\r\n        Worker w1p1, w2p1, w1p2, w2p2, w1p3, w2p3;\r\n\r\n        testingView.setChosenCardsIds(Arrays.asList(selectedCardId3, selectedCardId1, selectedCardId2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3), new Position(3, 1), new Position(3, 4)));\r\n        game.setupGame();\r\n        players = PlayersHandler.getPlayers();\r\n        w1p1 = players.get(1).getWorkers().get(0);\r\n        w2p1 = players.get(1).getWorkers().get(1);\r\n        w1p2= players.get(2).getWorkers().get(0);\r\n        w2p2 = players.get(2).getWorkers().get(1);\r\n        w1p3 = players.get(0).getWorkers().get(0);\r\n        w2p3 = players.get(0).getWorkers().get(1);\r\n        Player c = PlayersHandler.getCurrentPlayer();\r\n\r\n        //Player with Hephaestus performs a normal turn and then builds two times on the same cell according to his god's power\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setSkipOperations(Collections.singletonList(false));\r\n        testingView.setChosenBlockTypes(Arrays.asList(BlockType.LEVEL1, BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,0), new Position(0,0), new Position(0,0)));\r\n        game.handleTurn(PlayersHandler.getCurrentPlayer(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,0), w1p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Prometheus uses his god's power and builds both before and after moving\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setSkipOperations(Collections.singletonList(false));\r\n        testingView.setChosenBlockTypes(Arrays.asList(BlockType.LEVEL1, BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,2), new Position(1,2), new Position(2,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,2), w1p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Atlas uses his god's power and builds a dome on a level 0 cell\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.DOME));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,1), new Position(2,0)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(2,1), w1p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Hephaestus performs a normal turn\r\n        testingView.setChosenWorker(w2p3);\r\n        testingView.setSkipOperations(Collections.singletonList(true));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,2), new Position(0,1)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,2), w2p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Prometheus uses his god's power and builds both before and after moving\r\n        testingView.setChosenWorker(w2p1);\r\n        testingView.setSkipOperations(Collections.singletonList(false));\r\n        testingView.setChosenBlockTypes(Arrays.asList(BlockType.LEVEL3, BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,2), new Position(3,2), new Position(2,3)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(3,2), w2p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player 1 Atlas performs a normal turn\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(3,3), new Position(3,4)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(3,3), w2p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Hephaestus performs a normal turn and then builds two times on the same cell according to his god's power\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setSkipOperations(Collections.singletonList(false));\r\n        testingView.setChosenBlockTypes(Arrays.asList(BlockType.LEVEL1, BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,1), new Position(1,0), new Position(1,0)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,1), w1p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Prometheus performs a normal turn\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setSkipOperations(Collections.singletonList(true));\r\n        testingView.setChosenBlockTypes(Collections. singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,3), new Position(1,3)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(2,3), w1p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Atlas uses his god's power and builds a dome on a level 0 cell\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.DOME));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,1), new Position(2,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,1), w1p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Hephaestus performs a normal turn\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setSkipOperations(Collections.singletonList(true));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL3));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,0), new Position(1,0)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,0), w1p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Prometheus performs a normal turn\r\n        testingView.setChosenWorker(w2p1);\r\n        testingView.setSkipOperations(Collections.singletonList(true));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(3,1), new Position(3,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(3,1), w2p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Atlas performs a normal turn\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(4,3), new Position(3,4)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(4,3), w2p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Hephaestus performs a normal turn and wins\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setSkipOperations(Collections.singletonList(true));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,0), new Position(2,1)));\r\n        game.handleTurn(playersHandler.next(), win -> assertTrue(win, \"should have won the game\"));\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/it/polimi/ingsw/santorini/model/AtlasHephaestusPrometheusTest.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/test/java/it/polimi/ingsw/santorini/model/AtlasHephaestusPrometheusTest.java	(date 1593646839152)
+@@ -50,7 +50,6 @@
+         w2p2 = players.get(2).getWorkers().get(1);
+         w1p3 = players.get(0).getWorkers().get(0);
+         w2p3 = players.get(0).getWorkers().get(1);
+-        Player c = PlayersHandler.getCurrentPlayer();
+ 
+         //Player with Hephaestus performs a normal turn and then builds two times on the same cell according to his god's power
+         testingView.setChosenWorker(w1p3);
+@@ -60,7 +59,8 @@
+         game.handleTurn(PlayersHandler.getCurrentPlayer(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(1,0), w1p3.getPosition(), "should return the correct position")
++                () -> assertEquals(new Position(1,0), w1p3.getPosition(), "should return the correct position"),
++                () -> assertEquals(2, GameMap.getBoard()[0][0].getLevel(), "should return the correct level")
+         );
+ 
+         //Player with Prometheus uses his god's power and builds both before and after moving
+@@ -71,7 +71,8 @@
+         game.handleTurn(playersHandler.next(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(1,2), w1p1.getPosition(), "should return the correct position")
++                () -> assertEquals(new Position(1,2), w1p1.getPosition(), "should return the correct position"),
++                () -> assertEquals(2, GameMap.getBoard()[2][2].getLevel(), "should return the correct level")
+         );
+ 
+         //Player with Atlas uses his god's power and builds a dome on a level 0 cell
+@@ -81,7 +82,8 @@
+         game.handleTurn(playersHandler.next(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(2,1), w1p2.getPosition(), "should return the correct position")
++                () -> assertEquals(new Position(2,1), w1p2.getPosition(), "should return the correct position"),
++                () -> assertTrue(GameMap.getBoard()[2][0].isBlocked(), "should return the correct level")
+         );
+ 
+         //Player with Hephaestus performs a normal turn
+Index: src/test/java/it/polimi/ingsw/santorini/model/AtlasAresTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.model;\r\n\r\nimport it.polimi.ingsw.santorini.controller.CardLoader;\r\nimport it.polimi.ingsw.santorini.testing.controller.TestingController;\r\nimport it.polimi.ingsw.santorini.testing.view.TestingView;\r\nimport org.junit.jupiter.api.BeforeAll;\r\nimport org.junit.jupiter.api.Test;\r\nimport org.junit.jupiter.api.TestInstance;\r\n\r\nimport java.util.ArrayList;\r\nimport java.util.Arrays;\r\nimport java.util.Collections;\r\n\r\nimport static org.junit.jupiter.api.Assertions.*;\r\n\r\n@TestInstance(TestInstance.Lifecycle.PER_CLASS)\r\nclass AtlasAresTest {\r\n    GameDelegate delegate;\r\n    SantoriniGame game;\r\n    Integer numberOfPlayers;\r\n    PlayersHandler playersHandler;\r\n    TestingView testingView;\r\n\r\n    @BeforeAll\r\n    void init(){\r\n        numberOfPlayers = 2;\r\n        delegate = new TestingController();\r\n        game = new SantoriniGame(delegate, numberOfPlayers);\r\n        SantoriniGame.createMap();\r\n        CardLoader.loadCards();\r\n        playersHandler = game.getPlayersHandler();\r\n        testingView = TestingController.getTestingView();\r\n        testingView.setGameMode(2);\r\n        testingView.setNumOfPlayers(numberOfPlayers);\r\n    }\r\n\r\n    @Test\r\n    void test() {\r\n        Integer selectedCardId1 = 4, selectedCardId2 = 12;\r\n        ArrayList<Player> players;\r\n        Worker w1p1, w1p2, w2p2;\r\n\r\n        testingView.setChosenCardsIds(Arrays.asList(selectedCardId1, selectedCardId2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3)));\r\n        game.setupGame();\r\n        players = PlayersHandler.getPlayers();\r\n        w1p1 = players.get(1).getWorkers().get(0);\r\n        w1p2 = players.get(0).getWorkers().get(0);\r\n        w2p2 = players.get(0).getWorkers().get(1);\r\n\r\n        //Player with Atlas blocks a cell\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.DOME));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,1), new Position(0,0)));\r\n        game.handleTurn(PlayersHandler.getCurrentPlayer(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,1), w1p1.getPosition(), \"should return the correct position\"),\r\n                () -> assertTrue(GameMap.getBoard()[0][0].isBlocked(), \"cell should be blocked\")\r\n        );\r\n\r\n        //Player with Ares performs a normal turn then tries to deconstruct a block\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setSkipOperations(Collections.singletonList(false));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,0), new Position(1,1), new Position(0 ,0)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,0), w1p2.getPosition(), \"should return the correct position\"),\r\n                () -> assertTrue(GameMap.getBoard()[0][0].isBlocked(), \"cell should be occupied\")\r\n        );\r\n\r\n        //Player with Atlas blocks a cell\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.DOME));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,2), new Position(0,1)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,2), w1p1.getPosition(), \"should return the correct position\"),\r\n                () -> assertTrue(GameMap.getBoard()[0][1].isBlocked(), \"cell should be occupied\")\r\n        );\r\n\r\n        //Player with Ares performs a normal turn then deconstructs a block\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setSkipOperations(Collections.singletonList(false));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,4), new Position(1,3), new Position(1 ,1)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,4), w2p2.getPosition(), \"should return the correct position\"),\r\n                () -> assertEquals(0, GameMap.getBoard()[1][1].getLevel(), \"should return the correct level\")\r\n        );\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/it/polimi/ingsw/santorini/model/AtlasAresTest.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/test/java/it/polimi/ingsw/santorini/model/AtlasAresTest.java	(date 1593646839170)
+@@ -38,60 +38,61 @@
+     void test() {
+         Integer selectedCardId1 = 4, selectedCardId2 = 12;
+         ArrayList<Player> players;
+-        Worker w1p1, w1p2, w2p2;
++        Worker w1p1, w2p2;
+ 
+         testingView.setChosenCardsIds(Arrays.asList(selectedCardId1, selectedCardId2));
+         testingView.setChosenPositions(Arrays.asList(new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3)));
+         game.setupGame();
+         players = PlayersHandler.getPlayers();
+-        w1p1 = players.get(1).getWorkers().get(0);
+-        w1p2 = players.get(0).getWorkers().get(0);
+-        w2p2 = players.get(0).getWorkers().get(1);
++        w1p1 = players.get(0).getWorkers().get(0);
++        w2p2 = players.get(1).getWorkers().get(1);
+ 
+         //Player with Atlas blocks a cell
+         testingView.setChosenWorker(w1p1);
+         testingView.setChosenBlockTypes(Collections.singletonList(BlockType.DOME));
+-        testingView.setChosenPositions(Arrays.asList(new Position(0,1), new Position(0,0)));
++        testingView.setChosenPositions(Arrays.asList(new Position(1,0), new Position(0,0)));
+         game.handleTurn(PlayersHandler.getCurrentPlayer(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(0,1), w1p1.getPosition(), "should return the correct position"),
++                () -> assertEquals(new Position(1,0), w1p1.getPosition(), "should return the correct position"),
+                 () -> assertTrue(GameMap.getBoard()[0][0].isBlocked(), "cell should be blocked")
+         );
+ 
+-        //Player with Ares performs a normal turn then tries to deconstruct a block
+-        testingView.setChosenWorker(w1p2);
++        //Player with Ares performs a normal turn then tries to deconstruct Atlas's previous placed dome, but instead deconstructs a block
++        testingView.setChosenWorker(w2p2);
+         testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));
+         testingView.setSkipOperations(Collections.singletonList(false));
+-        testingView.setChosenPositions(Arrays.asList(new Position(1,0), new Position(1,1), new Position(0 ,0)));
++        testingView.setChosenPositions(Arrays.asList(new Position(1,2), new Position(0,2), new Position(0 ,0), new Position(0, 2)));
+         game.handleTurn(playersHandler.next(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(1,0), w1p2.getPosition(), "should return the correct position"),
+-                () -> assertTrue(GameMap.getBoard()[0][0].isBlocked(), "cell should be occupied")
++                () -> assertEquals(new Position(1,2), w2p2.getPosition(), "should return the correct position"),
++                () -> assertTrue(GameMap.getBoard()[0][0].isBlocked(), "cell should be occupied"),
++                () -> assertEquals(0, GameMap.getBoard()[0][2].getLevel(), "block should be deconstructed")
+         );
+ 
+         //Player with Atlas blocks a cell
+         testingView.setChosenWorker(w1p1);
+         testingView.setChosenBlockTypes(Collections.singletonList(BlockType.DOME));
+-        testingView.setChosenPositions(Arrays.asList(new Position(1,2), new Position(0,1)));
++        testingView.setChosenPositions(Arrays.asList(new Position(2,1), new Position(2,2)));
+         game.handleTurn(playersHandler.next(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(1,2), w1p1.getPosition(), "should return the correct position"),
+-                () -> assertTrue(GameMap.getBoard()[0][1].isBlocked(), "cell should be occupied")
++                () -> assertEquals(new Position(2,1), w1p1.getPosition(), "should return the correct position"),
++                () -> assertTrue(GameMap.getBoard()[2][2].isBlocked(), "cell should be occupied")
+         );
+ 
+-        //Player with Ares performs a normal turn then deconstructs a block
++        //Player with Ares performs a normal turn then tries to deconstruct Atlas's previous placed dome, but instead deconstructs a block
+         testingView.setChosenWorker(w2p2);
+         testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));
+         testingView.setSkipOperations(Collections.singletonList(false));
+-        testingView.setChosenPositions(Arrays.asList(new Position(1,4), new Position(1,3), new Position(1 ,1)));
++        testingView.setChosenPositions(Arrays.asList(new Position(1,3), new Position(1,2), new Position(2 ,2), new Position(1, 2)));
+         game.handleTurn(playersHandler.next(), null);
+ 
+         assertAll(
+-                () -> assertEquals(new Position(1,4), w2p2.getPosition(), "should return the correct position"),
+-                () -> assertEquals(0, GameMap.getBoard()[1][1].getLevel(), "should return the correct level")
++                () -> assertEquals(new Position(1,3), w2p2.getPosition(), "should return the correct position"),
++                () -> assertEquals(0, GameMap.getBoard()[1][2].getLevel(), "should return the correct level"),
++                () -> assertTrue(GameMap.getBoard()[2][2].isBlocked(), "cell should be blocked")
+         );
+     }
+ }
+\ No newline at end of file
+Index: src/main/java/it/polimi/ingsw/santorini/communication/SerializableMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/SerializableMessage.java	(date 1593648184745)
++++ src/main/java/it/polimi/ingsw/santorini/communication/SerializableMessage.java	(date 1593648184745)
+@@ -0,0 +1,9 @@
++package it.polimi.ingsw.santorini.communication;
++
++import java.io.Serializable;
++
++/**
++ * Brief Serializable class for the exchange of the messages between client(s) and server
++ */
++public abstract class SerializableMessage implements Serializable {
++}
+Index: src/main/java/it/polimi/ingsw/santorini/communication/WinMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/WinMessage.java	(date 1593648184738)
++++ src/main/java/it/polimi/ingsw/santorini/communication/WinMessage.java	(date 1593648184738)
+@@ -0,0 +1,16 @@
++package it.polimi.ingsw.santorini.communication;
++
++/**
++ * Brief Special message sent in case of win by some player
++ */
++public class WinMessage extends SerializableMessage{
++    private final TextMessage textMessage;
++
++    public WinMessage(TextMessage textMessage) {
++        this.textMessage = textMessage;
++    }
++
++    public TextMessage getTextMessage() {
++        return textMessage;
++    }
++}
+Index: src/main/java/it/polimi/ingsw/santorini/view/cli/CLIPrinter.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.view.cli;\r\n\r\nimport it.polimi.ingsw.santorini.communication.ImmutableCard;\r\nimport it.polimi.ingsw.santorini.communication.LobbyMessage;\r\nimport it.polimi.ingsw.santorini.communication.QuitMessage;\r\nimport it.polimi.ingsw.santorini.view.Color;\r\nimport it.polimi.ingsw.santorini.view.View;\r\nimport it.polimi.ingsw.santorini.view.modelimport.BlockLevel;\r\nimport it.polimi.ingsw.santorini.view.utils.SelectionMessage;\r\nimport it.polimi.ingsw.santorini.view.utils.UtilityMessage;\r\n\r\nimport java.io.PrintStream;\r\nimport java.util.ArrayList;\r\nimport java.util.Arrays;\r\nimport java.util.List;\r\n\r\n/**\r\n * Brief Class responsible for the printing of textual tables and the handling of the console's cursor's position\r\n */\r\npublic class CLIPrinter {\r\n    private static final PrintStream outputStream = new PrintStream(System.out);\r\n    /**\r\n     * Brief Parameter indicating the row where the first group of tables will be printed\r\n     */\r\n    private int firstRow = 2;\r\n    /**\r\n     * Brief Parameter indicating the column where the first group of tables will be printed\r\n     */\r\n    private final int firstColumn = 40;\r\n    /**\r\n     * Brief Parameter indicating the row where the second group of tables will be printed\r\n     */\r\n    private int secondRow = 2;\r\n    /**\r\n     * Brief Parameter indicating the column where the second group of tables will be printed\r\n     */\r\n    private int secondColumn = firstColumn;\r\n    /**\r\n     * Brief Number of columns used to get the correct formatting for each table\r\n     */\r\n    private final int GENERAL_OFFSET = 10;\r\n    private static int mostBottomRow;\r\n\r\n    /**\r\n     * Brief Moves the console cursor to a specific position\r\n     * @param row is the y coordinate where to move the cursor\r\n     * @param column is the x coordinate where to move the cursor\r\n     */\r\n    public static void moveCursor(int row, int column){\r\n        char escCode = 0x1B;\r\n        print(String.format(\"%c[%d;%dH\",escCode,row,column));\r\n    }\r\n\r\n    /**\r\n     * Brief Refreshes the screen\r\n     */\r\n    public static void cleanScreen(){\r\n        println(\"\\033[H\\033[2J\");\r\n        mostBottomRow = 0;\r\n    }\r\n\r\n    /**\r\n     * Brief Resets the printing rows to their initial values\r\n     */\r\n    private void resetRows(){\r\n        BoardPrinter.resetBoardRow();\r\n        firstRow = 2;\r\n        secondRow = 2;\r\n    }\r\n\r\n    /**\r\n     * Brief Resets the position of the screen cursor by positioning it at the first free row under all the printed objects\r\n     */\r\n    public void resetCursorPosition() {\r\n        int tempRow = Math.max(BoardPrinter.getBoardRow(), Math.max(firstRow, secondRow)) + 1;\r\n        if(tempRow > mostBottomRow)\r\n            mostBottomRow = tempRow;\r\n        moveCursor(mostBottomRow, 0);\r\n        resetRows();\r\n    }\r\n\r\n    /**\r\n     * Brief Re-initializes the value of secondColumn when it's known the size of the first table printed at (firstRow, firstColumn)\r\n     * @param width is the size of the first printed table\r\n     */\r\n    protected void reinitializeSecondColumn(int width) {\r\n        secondColumn = firstColumn + width + GENERAL_OFFSET + 4;\r\n    }\r\n\r\n    /**\r\n     * @return the first free row under the printed header\r\n     */\r\n    private int printHeader(String header, int dimension, int row, int column) {\r\n        moveCursor(row, column);\r\n        for(int i = 0; i < dimension + GENERAL_OFFSET; i++) {\r\n            if(i == 0)\r\n                print(Border.UPPER_LEFT_CORNER.symbol());\r\n            else if(i == dimension + GENERAL_OFFSET - 1)\r\n                print(Border.UPPER_RIGHT_CORNER.symbol());\r\n            else\r\n                print(Border.HORIZONTAL_BORDER.symbol());\r\n        }\r\n        moveCursor(++row, column);\r\n        print(Border.VERTICAL_BORDER.symbol());\r\n        moveCursor(row, column + (dimension + 5)/2);\r\n        print(header);\r\n        moveCursor(row, column + dimension + GENERAL_OFFSET - 1);\r\n        print(Border.VERTICAL_BORDER.symbol());\r\n        moveCursor(++row, column);\r\n        for(int i = 0; i < dimension + GENERAL_OFFSET; i++) {\r\n            if(i == 0)\r\n                print(Border.LEFT_CROSSED_BORDER.symbol());\r\n            else if(i == dimension + GENERAL_OFFSET - 1)\r\n                print(Border.RIGHT_CROSSED_BORDER.symbol());\r\n            else\r\n                print(Border.HORIZONTAL_BORDER.symbol());\r\n        }\r\n        return row;\r\n    }\r\n\r\n    /**\r\n     * @return the first free row under the printed body\r\n     */\r\n    private int printBody(int dimension, int row, int column, List<String> tags, List<String> values){\r\n        for(int i = 0; i < values.size(); i++){\r\n            moveCursor(++row, column);\r\n            print(Border.VERTICAL_BORDER.symbol() + \" \");\r\n            print(tags.get(i) + \": \");\r\n            print(values.get(i));\r\n            moveCursor(row, column + dimension + 5);\r\n            print(\"    \" + Border.VERTICAL_BORDER.symbol());\r\n        }\r\n        moveCursor(++row, column);\r\n        for(int i = 0; i < dimension + GENERAL_OFFSET; i++) {\r\n            if(i == 0)\r\n                print(Border.LOWER_LEFT_CORNER.symbol());\r\n            else if(i == dimension + GENERAL_OFFSET - 1)\r\n                print(Border.LOWER_RIGHT_CORNER.symbol());\r\n            else\r\n                print(Border.HORIZONTAL_BORDER.symbol());\r\n        }\r\n        return row;\r\n    }\r\n\r\n    /**\r\n     * Brief Prints a table in a certain position (row, column) on the screen\r\n     * @param header indicates what the table is about\r\n     * @param dimension is the width of the table\r\n     * @param row is the column where to start printing the table\r\n     * @param column is the column where to start printing the table\r\n     * @param tags are the unique values' ids\r\n     * @param tableValues are the actual values of the table\r\n     * @return the first free row under the printed table\r\n     */\r\n    private int printTable(String header, int dimension, int row, int column, List<String> tags, List<String> tableValues){\r\n        row = printHeader(header, dimension, row, column);\r\n        row = printBody(dimension, row, column, tags, tableValues);\r\n        return ++row;\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the list of players in game\r\n     * @param names are the players' names\r\n     */\r\n    public void printPlayersList(String header, List<String> names){\r\n        int longestNameLength = 0;\r\n        List<String> tags = new ArrayList<>();\r\n        //tags assignment\r\n        for(String name : names) {\r\n            if (name.length() > longestNameLength)\r\n                longestNameLength = name.length();\r\n            if(View.getPlayerId() > names.size())\r\n                tags.add(String.valueOf(names.indexOf(name)+2));\r\n            else {\r\n                String tag = String.valueOf(names.indexOf(name)+1);\r\n                if(LobbyMessage.getHostId().equals(names.indexOf(name)+1))\r\n                    tag = Color.formatMessageColor(tag, Color.BLUE);\r\n                tags.add(tag);\r\n            }\r\n        }\r\n        //table printing\r\n        secondRow = printTable(header, longestNameLength, secondRow, secondColumn, tags, names);\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the commands available in lobby for a certain player\r\n     * @param header is the header of the table\r\n     * @param tags are the commands that can be used by the player\r\n     * @param values are the values contained in the table\r\n     */\r\n    public void printLobbyCommands(String header, List<String> tags, List<String> values){\r\n        int width = 0;\r\n        //tags assignment\r\n        for(int i = 0; i < tags.size(); i++) {\r\n            if (tags.get(i).length() + values.get(i).length() > width)\r\n                width = tags.get(i).length() + values.get(i).length();\r\n            tags.set(i, Color.formatMessageColor(tags.get(i), CLIView.getInputOptionsColor()));\r\n        }\r\n        //table printing\r\n        firstRow = printTable(header, width, firstRow, firstColumn, tags, values);\r\n        reinitializeSecondColumn(width);\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the helping commands\r\n     * @param thereAreCards determines whether to show the cards command or not\r\n     */\r\n    protected void printUtilityCommands(boolean thereAreCards){\r\n        int TABLE_DIMENSION = 17;\r\n        List<String> tags = new ArrayList<>(Arrays.asList(Color.formatMessageColor(QuitMessage.getRequest(), CLIView.getInputOptionsColor()), Color.formatMessageColor(UtilityMessage.helpCommand, CLIView.getInputOptionsColor())));\r\n        List<String> tableValues = new ArrayList<>(Arrays.asList(\"give up\", \"show rules\"));\r\n        if(thereAreCards) {\r\n            tags.add(Color.formatMessageColor(UtilityMessage.cardsEffectCommand, CLIView.getInputOptionsColor()));\r\n            tableValues.add(\"show cards\");\r\n        }\r\n        resetRows();\r\n        //table printing\r\n        firstRow = printTable(\"Utility\", TABLE_DIMENSION, firstRow, firstColumn, tags, tableValues);\r\n        reinitializeSecondColumn(TABLE_DIMENSION);\r\n    }\r\n\r\n    /**\r\n     * Brief Prints all the possible commands for the movement and building steps\r\n     */\r\n    protected void printCommands(){\r\n        int centerPosition = firstColumn + GENERAL_OFFSET;\r\n        //header printing\r\n        moveCursor(++firstRow, firstColumn);\r\n        print(TurnCommand.getHeader());\r\n        //body printing\r\n        printCommandSymbols(++firstRow, centerPosition);\r\n        printCommandsValues(centerPosition);\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the turn's command's symbols\r\n     * @param initialPosition is the first row after which the printing process starts\r\n     * @param centerPosition is the positions where the commands will be printed\r\n     */\r\n    private void printCommandSymbols(int initialPosition, int centerPosition) {\r\n        int index = 0;\r\n        moveCursor(firstRow, centerPosition);\r\n        for(TurnCommand command : TurnCommand.values()) {\r\n            if (command.getSymbol() != null)\r\n                print(command.getSymbol() + \" \");\r\n            else\r\n                print(\"  \");\r\n            if(++index == 3) {\r\n                firstRow = firstRow + 2;\r\n                moveCursor(firstRow, centerPosition);\r\n                index = 0;\r\n            }\r\n        }\r\n        firstRow = initialPosition + 1;\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the turn's command's values\r\n     * @param centerPosition is the positions where the commands will be printed\r\n     */\r\n    private void printCommandsValues(int centerPosition) {\r\n        int index = 0;\r\n        moveCursor(firstRow, centerPosition + 1);\r\n        for(TurnCommand command : TurnCommand.values()) {\r\n            print(Color.formatMessageColor(command.getCommand(), CLIView.getInputOptionsColor()));\r\n            if(++index == 3) {\r\n                moveCursor(++firstRow, centerPosition + 1);\r\n                index = 0;\r\n            }\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the list of blocks available in game\r\n     */\r\n    protected void printBlocksList(){\r\n        int longestLength = 0;\r\n        List<String> blocksNames = new ArrayList<>(), blocksSymbols = new ArrayList<>();\r\n        //tags assignment\r\n        for(BlockLevel blockLevel : BlockLevel.values()) {\r\n            if(blockLevel.equals(BlockLevel.GROUND)) continue;\r\n            if (blockLevel.getName().length() + blockLevel.symbol().length() > longestLength)\r\n                longestLength = blockLevel.getName().length() + blockLevel.symbol().length();\r\n            blocksNames.add(blockLevel.getName());\r\n            blocksSymbols.add(Color.formatMessageColor(blockLevel.symbol(), Color.valueOf(blockLevel.color())));\r\n        }\r\n        //table printing\r\n        secondRow = printTable(\"Blocks\", longestLength, secondRow, secondColumn, blocksNames, blocksSymbols);\r\n    }\r\n\r\n    /**\r\n     * Brief Prints a colored list of the cards in game\r\n     * @param cards are the cards in game\r\n     */\r\n    protected void printCards(List<ImmutableCard> cards){\r\n        int longestDimension = 0;\r\n        List<String> cardsNames = new ArrayList<>();\r\n        //tags assignment\r\n        for (int i = 0; i < cards.size(); i++) {\r\n            int newDimension = cards.get(i).getName().length() + View.getPlayersInGame().get(i).length();\r\n            if (newDimension > longestDimension)\r\n                longestDimension = newDimension;\r\n            cardsNames.add(cards.get(i).getName());\r\n        }\r\n        //table printing\r\n        secondRow = printTable(\"Cards\", longestDimension, secondRow, secondColumn, View.getPlayersInGame(), cardsNames);\r\n    }\r\n\r\n    protected static void print(String message){\r\n        outputStream.print(message);\r\n    }\r\n\r\n    protected static void println(String message){\r\n        outputStream.println(message);\r\n        mostBottomRow++;\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the timer on the screen\r\n     */\r\n    protected void printTime(Integer time) {\r\n        resetCursorPosition();\r\n        CLIPrinter.println(SelectionMessage.undoDirectionsMessage);\r\n        CLIPrinter.println(SelectionMessage.undoRequestMessage + Color.formatMessageColor(\" REMAINING TIME:\", CLIView.getInputOptionsColor())\r\n                            + \" \" + time);\r\n        mostBottomRow -= 2;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/view/cli/CLIPrinter.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/view/cli/CLIPrinter.java	(date 1593646839188)
+@@ -321,8 +321,7 @@
+     protected void printTime(Integer time) {
+         resetCursorPosition();
+         CLIPrinter.println(SelectionMessage.undoDirectionsMessage);
+-        CLIPrinter.println(SelectionMessage.undoRequestMessage + Color.formatMessageColor(" REMAINING TIME:", CLIView.getInputOptionsColor())
+-                            + " " + time);
++        CLIPrinter.println(SelectionMessage.undoRequestMessage + " REMAINING TIME: " + time);
+         mostBottomRow -= 2;
+     }
+ }
+Index: src/main/java/it/polimi/ingsw/santorini/communication/GameMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.communication;\r\n\r\nimport java.io.Serializable;\r\nimport java.util.List;\r\n\r\n/**\r\n * Brief Serializable object representing the message exchanged between client and server which contains game data\r\n */\r\npublic class GameMessage implements Serializable {\r\n    /**\r\n     * Brief Attribute containing a unique id for the method to call (client side) or the player's id (server side)\r\n     */\r\n    private final Integer id;\r\n    private final boolean broadcast;\r\n    private final List<Object> data;\r\n\r\n    public GameMessage(Integer id, boolean broadcast, List<Object> data){\r\n        this.id = id;\r\n        this.broadcast = broadcast;\r\n        this.data = data;\r\n    }\r\n\r\n    /**\r\n     * Brief Creates a GameMessage which doesn't contain any useful data\r\n     */\r\n    public GameMessage(Integer id, boolean broadcast){\r\n        this.id = id;\r\n        this.broadcast = broadcast;\r\n        this.data = null;\r\n    }\r\n\r\n    /**\r\n     * Brief Creates a GameMessage which is not intended to be used for a method call on the client side\r\n     */\r\n    public GameMessage(boolean broadcast, List<Object> data) {\r\n        id = -1;\r\n        this.broadcast = broadcast;\r\n        this.data = data;\r\n    }\r\n\r\n    public Integer getId() {\r\n        return id;\r\n    }\r\n\r\n    public boolean isBroadcast() {\r\n        return broadcast;\r\n    }\r\n\r\n    public List<Object> getData() {\r\n        return data;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/GameMessage.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/communication/GameMessage.java	(date 1593646839204)
+@@ -1,12 +1,11 @@
+ package it.polimi.ingsw.santorini.communication;
+ 
+-import java.io.Serializable;
+ import java.util.List;
+ 
+ /**
+  * Brief Serializable object representing the message exchanged between client and server which contains game data
+  */
+-public class GameMessage implements Serializable {
++public class GameMessage extends SerializableMessage {
+     /**
+      * Brief Attribute containing a unique id for the method to call (client side) or the player's id (server side)
+      */
+Index: src/main/java/it/polimi/ingsw/santorini/view/cli/CLIView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.view.cli;\r\n\r\nimport it.polimi.ingsw.santorini.communication.ImmutableCard;\r\nimport it.polimi.ingsw.santorini.view.Color;\r\nimport it.polimi.ingsw.santorini.view.View;\r\nimport it.polimi.ingsw.santorini.view.modelimport.BlockLevel;\r\nimport it.polimi.ingsw.santorini.communication.ImmutablePosition;\r\nimport it.polimi.ingsw.santorini.view.utils.SelectionMessage;\r\nimport it.polimi.ingsw.santorini.view.utils.UtilityMessage;\r\n\r\nimport java.util.*;\r\nimport java.util.function.Consumer;\r\n\r\n/**\r\n * Brief Creates a textual representation of the gaming scenario\r\n */\r\npublic class CLIView extends View {\r\n    private final CLIPrinter printer;\r\n    private final CLIReader reader;\r\n    private int TIME = 5;   //[s]\r\n    private TimerTask task = createTimerTask();\r\n\r\n    private static final Color INPUT_OPTIONS_COLOR = Color.REVERSED;\r\n\r\n    /**\r\n     * Brief Creates a new CLI initializing its reader and printer\r\n     */\r\n    public CLIView(){\r\n        printer = new CLIPrinter();\r\n        reader = new CLIReader();\r\n    }\r\n\r\n    /**\r\n     * Brief Creates a new task for the timer execution\r\n     * @return the created task\r\n     */\r\n    private TimerTask createTimerTask() {\r\n        return new TimerTask() {\r\n            @Override\r\n            public void run() {\r\n                if(TIME >= 0){\r\n                    printTime(TIME);\r\n                    TIME--;\r\n                } else\r\n                    onTimerExpired();\r\n            }\r\n        };\r\n    }\r\n\r\n    /**\r\n     * {@inheritDoc}\r\n     */\r\n    @Override\r\n    public Boolean requestsImmediateRun() {\r\n        return true;\r\n    }\r\n\r\n    @Override\r\n    public void updateScreen(Object[][] board, List<ImmutablePosition> validPositions) {\r\n        String[][] workersBoard = new String[defaultHeight][defaultHeight];\r\n        if(buildingLevels == null)\r\n            buildingLevels = new Integer[defaultHeight][defaultWidth];\r\n        for(int i = 0; i < defaultHeight; i++)\r\n            for (int j = 0; j < defaultWidth; j++)\r\n                deserializeCell(board[i][j], workersBoard, i, j);\r\n        CLIPrinter.cleanScreen();\r\n        printer.printUtilityCommands(cardsInGame.size() != 0);\r\n        BoardPrinter.printBoard(workersBoard, buildingLevels, validPositions);\r\n    }\r\n\r\n    /**\r\n     * Brief Analyzes the content of a board's cell, updating two other boards: one containing all the buildings' levels and the other one ready to be printed\r\n     * @param cell is the cell that has to be analyzed\r\n     * @param workersBoard is a board containing the workers' genders correctly formatted with their respective color\r\n     * @param row is the cell's row\r\n     * @param col is the cell's column\r\n     */\r\n    @SuppressWarnings({\"unchecked\"})\r\n    private void deserializeCell(Object cell, String[][] workersBoard, int row, int col) {\r\n        if (cell instanceof List)  //position is occupied\r\n            extractCellContent((List<Object>) cell, workersBoard, row, col);\r\n        else\r\n            buildingLevels[row][col] = (Integer) cell;   //level in position (i, j)\r\n    }\r\n\r\n    /**\r\n     * Brief Extracts the content of an occupied board's cell checking if it's a worker or a building\r\n     */\r\n    private void extractCellContent(List<Object> cell, String[][] board, int row, int col) {\r\n        String color = \"\", gender = \"\";\r\n        for (Object content : cell) {\r\n            if (content instanceof String) {    //the content is a worker\r\n                try {\r\n                    Color.valueOf((String) content);\r\n                    color = (String) content;\r\n                } catch (IllegalArgumentException e) {\r\n                    gender = (String) content;\r\n                }\r\n            } else  //the content is a building\r\n                buildingLevels[row][col] = (Integer) content;\r\n        }\r\n        board[row][col] = Color.formatMessageColor(gender, Color.valueOf(color));\r\n    }\r\n\r\n    @Override\r\n    public void chooseGameMode(List<String> availableModes, List<Integer> correctInputs, Consumer<Integer> onCompletion) {\r\n        Integer choice;\r\n        CLIPrinter.cleanScreen();\r\n        printMessage(SelectionMessage.gameModeSelectionMessage);\r\n        for(String mode : availableModes)\r\n            printMessage(Color.formatMessageColor(String.valueOf(availableModes.indexOf(mode)), INPUT_OPTIONS_COLOR) + \": \" + mode);\r\n        choice = reader.getCorrectInput(\"Chosen mode: \", correctInputs);\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void chooseUsername(Integer playerId, Consumer<String> onCompletion) {\r\n        View.playerId = playerId;\r\n        do {\r\n            CLIPrinter.print(SelectionMessage.usernameSelectionMessage);\r\n            playerName = reader.readLine();\r\n        }\r\n        while (playerName == null);\r\n        onCompletion.accept(playerName);\r\n    }\r\n\r\n    @Override\r\n    public void selectColor(Consumer<String> onCompletion) {\r\n        String choice;\r\n        List<Integer> correctInputs = new ArrayList<>();\r\n        Color chosenColor;\r\n        if(workersColors.size() > 1){   //let the user choose a color if there are at least two available choices\r\n            CLIPrinter.cleanScreen();\r\n            printMessage(SelectionMessage.colorSelectionMessage);\r\n            for (Color color : workersColors) {\r\n                correctInputs.add(workersColors.indexOf(color));\r\n                printMessage(Color.formatMessageColor(String.valueOf(workersColors.indexOf(color)), INPUT_OPTIONS_COLOR) + \": \" + Color.formatMessageColor(color.getName(), color));\r\n            }\r\n            chosenColor = workersColors.get(reader.getCorrectInput(\"Chosen color: \", correctInputs));\r\n        }\r\n        else\r\n            chosenColor = workersColors.get(0);\r\n        playerColor = chosenColor;\r\n        choice = chosenColor.getName();\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void getVote(Map<Integer, String> players, String question, Consumer<Integer> onCompletion){\r\n        Integer choice;\r\n        List<Integer> ids = new ArrayList<>(players.keySet());\r\n        CLIPrinter.cleanScreen();\r\n        printMessage(question);\r\n        for(Integer id : ids)\r\n            printMessage(Color.formatMessageColor(String.valueOf(id), INPUT_OPTIONS_COLOR) + \" - \" + players.get(id));\r\n        choice = reader.getCorrectInput(\"Chosen player: \", ids);\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void chooseFirstPlayer(List<String> names, Consumer<Integer> onCompletion) {\r\n        Integer choice;\r\n        List<Integer> correctInputs = new ArrayList<>();\r\n        CLIPrinter.cleanScreen();\r\n        printMessage(SelectionMessage.firstPlayerSelectionMessage);\r\n        for(int i = 1; i <= names.size(); i++) {\r\n            correctInputs.add(i);\r\n            printMessage(Color.formatMessageColor(String.valueOf(i), INPUT_OPTIONS_COLOR) + \": \" + names.get(i-1));\r\n        }\r\n        choice = reader.getCorrectInput(\"Chosen player: \", correctInputs);\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void chooseCards(List<ImmutableCard> cards, Integer numberOfSelections, Consumer<List<Integer>> onCompletion) {\r\n        Integer choice;\r\n        List<Integer> chosenIds = new ArrayList<>();\r\n\r\n        CLIPrinter.cleanScreen();\r\n        printMessage(SelectionMessage.cardSelectionMessage);\r\n        for(; numberOfSelections > 0; numberOfSelections--){\r\n            printMessage(SelectionMessage.remainingSelections + numberOfSelections);\r\n            choice = getChosenCard(cards);\r\n            chosenIds.add(choice);\r\n            removeSelectedCard(choice, cards);\r\n            CLIPrinter.cleanScreen();\r\n        }\r\n        onCompletion.accept(chosenIds);\r\n    }\r\n\r\n    /**\r\n     * Brief Removes the card with the chosen id from the deck of cards passed as a parameter to the method\r\n     */\r\n    private void removeSelectedCard(Integer chosenCardId, List<ImmutableCard> cards) {\r\n        cards.removeIf(card -> card.getId().equals(chosenCardId));\r\n    }\r\n\r\n    /**\r\n     * @param cards are the cards to choose from\r\n     * @return the chosen card's id\r\n     */\r\n    private Integer getChosenCard(List<ImmutableCard> cards){\r\n        List<Integer> correctInputs = new ArrayList<>();\r\n        for (ImmutableCard card : cards) {\r\n            correctInputs.add(card.getId());\r\n            printMessage(Color.formatMessageColor(String.valueOf(card.getId()), INPUT_OPTIONS_COLOR) + \" - \" + card.getName() + \" (\" + card.getTitle() + \")\" + \": \" + \"\\n\" + card.getDescription() + \"\\n\");\r\n        }\r\n        return reader.getCorrectInput(\"Chosen card: \", correctInputs);\r\n    }\r\n\r\n    @Override\r\n    public void chooseWorker(List<Integer> correctInputs, List<String> genders, Consumer<Integer> onCompletion) {\r\n        Integer choice;\r\n        printTables();\r\n        printMessage(SelectionMessage.workerSelectionMessage);\r\n        for(Integer i : correctInputs)\r\n            printMessage(Color.formatMessageColor(String.valueOf(i), INPUT_OPTIONS_COLOR) + \": \" + genders.get(i));\r\n        choice = reader.getCorrectInput(\"Chosen worker: \", correctInputs);\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void choosePosition(List<ImmutablePosition> positions, String selectionTypeMessage,\r\n                               ImmutablePosition currentPosition, Consumer<ImmutablePosition> onCompletion){\r\n        printTables();\r\n        printMessage(selectionTypeMessage);\r\n        if(currentPosition == null)\r\n            onCompletion.accept(handlePlacementPhase(positions));\r\n        else\r\n            onCompletion.accept(handleTurn(positions, currentPosition));\r\n    }\r\n\r\n    /**\r\n     * Brief Handles the turn phase (Move+Build) asking the player to choose a direction where to move or to build\r\n     * @return the position in the chosen direction\r\n     */\r\n    private ImmutablePosition handleTurn(List<ImmutablePosition> positions, ImmutablePosition currentPosition) {\r\n        CLIPrinter.print(\"Chosen position: \");\r\n        ImmutablePosition position = TurnCommand.getPositionByCommand(reader.getSingleCharInput(), currentPosition);\r\n        while (position == null || !positions.contains(position)) {\r\n            reader.unlockInputStream();\r\n            printMessage(SelectionMessage.invalidChoiceMessage);\r\n            position = TurnCommand.getPositionByCommand(reader.getSingleCharInput(), currentPosition);\r\n        }\r\n        return position;\r\n    }\r\n\r\n    /**\r\n     * Brief Handles the workers placement phase asking the player to select the position where to place each worker\r\n     * @return the chosen position\r\n     */\r\n    private ImmutablePosition handlePlacementPhase(List<ImmutablePosition> positions) {\r\n        ImmutablePosition position = placeWorker();\r\n        while (!positions.contains(position)) {\r\n            printMessage(SelectionMessage.invalidChoiceMessage);\r\n            position = placeWorker();\r\n        }\r\n        return position;\r\n    }\r\n\r\n    /**\r\n     * Brief Asks the player to select a position by typing its coordinates' values\r\n     * @return the chosen position\r\n     */\r\n    private ImmutablePosition placeWorker(){\r\n        int x, y;\r\n        List<Integer> correctXInputs = new ArrayList<>(), correctYInputs = new ArrayList<>();\r\n\r\n        for(int i = 0; i < defaultHeight; i++)\r\n            correctXInputs.add(i);\r\n        for (int j = 0; j < defaultWidth; j++)\r\n            correctYInputs.add(j);\r\n\r\n        x = reader.getCorrectInput(SelectionMessage.xCoordinateSelectionMessage, correctXInputs);\r\n        y = reader.getCorrectInput(SelectionMessage.yCoordinateSelectionMessage, correctYInputs);\r\n        return new ImmutablePosition(x, y);\r\n    }\r\n\r\n    @Override\r\n    public void chooseBlockType(List<Integer> blockTypes, List<String> blockNames, Consumer<Integer> onCompletion) {\r\n        Integer choice;\r\n        printTables();\r\n        printMessage(SelectionMessage.blockTypeSelectionMessage);\r\n        for (int i = 0; i < blockNames.size(); i++)\r\n            printMessage(Color.formatMessageColor(blockTypes.get(i).toString(),\r\n                    INPUT_OPTIONS_COLOR) + \": \" + blockNames.get(i));\r\n        choice = reader.getCorrectInput(\"Chosen block type: \", blockTypes);\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void skipOperation(String operationType, Consumer<Boolean> onCompletion) {\r\n        Boolean choice;\r\n        do {\r\n            printTables();\r\n            printMessage(SelectionMessage.skipOperationQuestion + operationType + \"? \" + SelectionMessage.skipOperationChoices);\r\n            String input = reader.getSingleCharInput();\r\n            switch(input) {\r\n                case SelectionMessage.CONFIRM: choice = true; break;\r\n                case SelectionMessage.DECLINE: choice = false; break;\r\n                default: printMessage(SelectionMessage.badInputMessage); choice = null; break;\r\n            }\r\n        }\r\n        while (choice == null);\r\n        onCompletion.accept(choice);\r\n    }\r\n\r\n    @Override\r\n    public void printMessage(String message) {\r\n        CLIPrinter.println(message);\r\n    }\r\n\r\n    @Override\r\n    public void printLobbyList(List<String> names) {\r\n        printer.printPlayersList(\"Lobby\", names);\r\n        printer.resetCursorPosition();\r\n    }\r\n\r\n    @Override\r\n    public void printLobbyCommands(List<String> commands, List<String> functions) {\r\n        CLIPrinter.cleanScreen();\r\n        printer.printLobbyCommands(\"Commands\", commands, functions);\r\n    }\r\n\r\n    @Override\r\n    public void printGameTitle() {\r\n        CLIPrinter.cleanScreen();\r\n        CLIPrinter.println(Color.formatMessageColor(UtilityMessage.textualTitle, Color.BLUE) + \"\\n\");\r\n        CLIPrinter.println(UtilityMessage.credits + \"\\n\");\r\n        CLIPrinter.println(\"\\n\");\r\n    }\r\n\r\n    @Override\r\n    public void onUndoRequest(Consumer<Boolean> onCompletion) {\r\n        boolean choice;\r\n        Thread timer = new Thread(() -> {\r\n            Timer t = new Timer();\r\n            int period = 1000;  //[ms]\r\n            t.schedule(task, 0, period);\r\n        });\r\n        timer.start();\r\n        choice = reader.getUndoChoice();\r\n        interruptTimer(timer);\r\n        onCompletion.accept(choice);\r\n     }\r\n\r\n    @Override\r\n    public void thisIsHost(Boolean host) {\r\n\r\n    }\r\n\r\n    @Override\r\n    public void gameIsStarting() {\r\n\r\n    }\r\n\r\n    @Override\r\n    public void waitOtherPlayers() {\r\n\r\n    }\r\n\r\n    @Override\r\n    public void printTime(Integer time) {\r\n        printer.printTime(time);\r\n    }\r\n\r\n    @Override\r\n    public void onTimerExpired() {\r\n        reader.interruptReading();\r\n    }\r\n\r\n    /**\r\n     * Brief Prints the tables containing relevant information such as the list of players or the commands each player can use\r\n     */\r\n    private void printTables(){\r\n        printer.printPlayersList(\"Players\", playersInGame);\r\n        printer.printBlocksList();\r\n        printer.printCommands();\r\n        if(cardsInGame.size() != 0)\r\n            printer.printCards(cardsInGame);\r\n        printer.resetCursorPosition();\r\n    }\r\n\r\n    public static Color getInputOptionsColor() {\r\n        return INPUT_OPTIONS_COLOR;\r\n    }\r\n\r\n    /**\r\n     * Brief Interrupts the timer for the undo functionality\r\n     * @param timer is a thread containing the real timer\r\n     */\r\n    private void interruptTimer(Thread timer){\r\n        task.cancel();\r\n        timer.interrupt();\r\n        TIME = 5;\r\n        task = createTimerTask();\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/view/cli/CLIView.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/view/cli/CLIView.java	(date 1593647941649)
+@@ -3,7 +3,6 @@
+ import it.polimi.ingsw.santorini.communication.ImmutableCard;
+ import it.polimi.ingsw.santorini.view.Color;
+ import it.polimi.ingsw.santorini.view.View;
+-import it.polimi.ingsw.santorini.view.modelimport.BlockLevel;
+ import it.polimi.ingsw.santorini.communication.ImmutablePosition;
+ import it.polimi.ingsw.santorini.view.utils.SelectionMessage;
+ import it.polimi.ingsw.santorini.view.utils.UtilityMessage;
+Index: src/main/java/it/polimi/ingsw/santorini/communication/TextMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.communication;\r\n\r\nimport java.io.Serializable;\r\n\r\npublic class TextMessage implements Serializable {\r\n    private final String content;\r\n    private static final String startRequest = \"start\";\r\n\r\n    public TextMessage(String content) {\r\n        this.content = content;\r\n    }\r\n\r\n    public String getContent() {\r\n        return content;\r\n    }\r\n\r\n    public static String getStartRequest() {\r\n        return startRequest;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/TextMessage.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/communication/TextMessage.java	(date 1593646839220)
+@@ -2,7 +2,7 @@
+ 
+ import java.io.Serializable;
+ 
+-public class TextMessage implements Serializable {
++public class TextMessage extends SerializableMessage  {
+     private final String content;
+     private static final String startRequest = "start";
+ 
+Index: src/main/java/it/polimi/ingsw/santorini/communication/QuitMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.communication;\r\n\r\nimport java.io.Serializable;\r\n\r\n/**\r\n * Brief Message containing a quit request and the consequent answer\r\n */\r\npublic class QuitMessage implements Serializable {\r\n    private static final String request = \"quit\";\r\n    private static final String answer = \"A player quit, ending the game...\";\r\n\r\n    public static String getRequest(){ return request; }\r\n\r\n    public static String getAnswer() {\r\n        return answer;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/QuitMessage.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/communication/QuitMessage.java	(date 1593647360450)
+@@ -1,17 +1,26 @@
+ package it.polimi.ingsw.santorini.communication;
+ 
+-import java.io.Serializable;
+-
+ /**
+  * Brief Message containing a quit request and the consequent answer
+  */
+-public class QuitMessage implements Serializable {
++public class QuitMessage extends SerializableMessage  {
+     private static final String request = "quit";
+     private static final String answer = "A player quit, ending the game...";
++    private boolean gameOver;
++
++    public QuitMessage(){}
++
++    public QuitMessage(boolean gameOver) {
++        this.gameOver = gameOver;
++    }
+ 
+     public static String getRequest(){ return request; }
+ 
+     public static String getAnswer() {
+         return answer;
+     }
++
++    public boolean isGameOver() {
++        return gameOver;
++    }
+ }
+Index: src/main/java/it/polimi/ingsw/santorini/communication/LobbyMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.communication;\r\n\r\nimport it.polimi.ingsw.santorini.controller.server.ServerNetworkHandler;\r\n\r\nimport java.io.Serializable;\r\nimport java.util.List;\r\n\r\n/**\r\n * Brief Message exchanged during the lobby phase or when it's necessary to send just a textual message\r\n */\r\npublic class LobbyMessage implements Serializable {\r\n    private final Integer id;\r\n    private final Integer textualMessageId;\r\n    private final List<Object> data;\r\n    private static final Integer hostId = ServerNetworkHandler.getHostId();\r\n\r\n    public LobbyMessage(Integer textualMessageId){\r\n        this.textualMessageId = textualMessageId;\r\n        id = null;\r\n        data = null;\r\n    }\r\n\r\n    public LobbyMessage(Integer id, List<Object> data){\r\n        this.id = id;\r\n        textualMessageId = null;\r\n        this.data = data;\r\n    }\r\n\r\n    /**\r\n     * Brief Creates a new message containing an id, a textual message and some data\r\n     * @param id is the id of the method's heading\r\n     * @param textualMessageId is the id of a textual message\r\n     * @param data contain some useful data to extract when the id is not null\r\n     */\r\n    public LobbyMessage(Integer id, Integer textualMessageId, List<Object> data) {\r\n        this.id = id;\r\n        this.textualMessageId = textualMessageId;\r\n        this.data = data;\r\n    }\r\n\r\n    public Integer getTextualMessageId() {\r\n        return textualMessageId;\r\n    }\r\n\r\n    public Integer getId() {\r\n        return id;\r\n    }\r\n\r\n    public static Integer getHostId() {return hostId;}\r\n\r\n    public List<Object> getData() {\r\n        return data;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/LobbyMessage.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/communication/LobbyMessage.java	(date 1593646839278)
+@@ -8,7 +8,7 @@
+ /**
+  * Brief Message exchanged during the lobby phase or when it's necessary to send just a textual message
+  */
+-public class LobbyMessage implements Serializable {
++public class LobbyMessage extends SerializableMessage  {
+     private final Integer id;
+     private final Integer textualMessageId;
+     private final List<Object> data;
+Index: src/test/java/it/polimi/ingsw/santorini/model/MinotaurPanApolloTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.model;\r\n\r\nimport it.polimi.ingsw.santorini.controller.CardLoader;\r\nimport it.polimi.ingsw.santorini.testing.controller.TestingController;\r\nimport it.polimi.ingsw.santorini.testing.view.TestingView;\r\nimport org.junit.jupiter.api.BeforeAll;\r\nimport org.junit.jupiter.api.Test;\r\nimport org.junit.jupiter.api.TestInstance;\r\n\r\nimport java.util.ArrayList;\r\nimport java.util.Arrays;\r\nimport java.util.Collections;\r\n\r\nimport static org.junit.jupiter.api.Assertions.*;\r\nimport static org.junit.jupiter.api.Assertions.assertNotEquals;\r\n\r\n@TestInstance(TestInstance.Lifecycle.PER_CLASS)\r\nclass MinotaurPanApolloTest {\r\n    GameDelegate delegate;\r\n    SantoriniGame game;\r\n    Integer numberOfPlayers;\r\n    PlayersHandler playersHandler;\r\n    TestingView testingView;\r\n\r\n    @BeforeAll\r\n    void init(){\r\n        numberOfPlayers = 3;\r\n        delegate = new TestingController();\r\n        game = new SantoriniGame(delegate, numberOfPlayers);\r\n        SantoriniGame.createMap();\r\n        CardLoader.loadCards();\r\n        playersHandler = game.getPlayersHandler();\r\n        testingView = TestingController.getTestingView();\r\n        testingView.setGameMode(2);\r\n        testingView.setNumOfPlayers(numberOfPlayers);\r\n    }\r\n\r\n    @Test\r\n    void test() {\r\n        Integer selectedCardId1 = 8, selectedCardId2 = 20, selectedCardId3 = 1;\r\n        ArrayList<Player> players;\r\n        Worker w1p1, w2p1, w1p2, w2p2, w1p3, w2p3;\r\n\r\n        testingView.setChosenCardsIds(Arrays.asList(selectedCardId3, selectedCardId1, selectedCardId2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3), new Position(3, 1), new Position(3, 4)));\r\n        game.setupGame();\r\n        players = PlayersHandler.getPlayers();\r\n        w1p2 = players.get(1).getWorkers().get(0);\r\n        w2p2 = players.get(1).getWorkers().get(1);\r\n        w1p3= players.get(2).getWorkers().get(0);\r\n        w2p3 = players.get(2).getWorkers().get(1);\r\n        w1p1 = players.get(0).getWorkers().get(0);\r\n        w2p1 = players.get(0).getWorkers().get(1);\r\n\r\n        //Player with Minotaur performs a normal turn\r\n        testingView.setChosenWorker(w2p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,3), new Position(0,3)));\r\n        game.handleTurn(PlayersHandler.getCurrentPlayer(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,3), w2p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Pan performs a normal turn\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,2), new Position(0,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,2), w1p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Apollo swaps workers\r\n        testingView.setChosenWorker(w2p3);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,3), new Position(3,3)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(3,4), w2p2.getPosition(), \"should return the correct position\"),\r\n                () -> assertEquals(new Position(2,3), w2p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Minotaur performs a normal turn\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,1), new Position(0,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,1), w1p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Pan moves up\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,3), new Position(0,4)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,3), w1p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Apollo performs a normal turn\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,1), new Position(3,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(2,1), w1p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Minotaur performs a normal turn\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,0), new Position(1,1)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,0), w1p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Pan moves up\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,2), new Position(1,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,2), w1p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Apollo performs a normal turn\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,2), new Position(3,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(2,2), w1p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Minotaur moves up\r\n        testingView.setChosenWorker(w2p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,3), new Position(1,3)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,3), w2p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Pan moves up\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(3,3), new Position(3,4)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(3,3), w2p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Apollo performs a normal turn\r\n        testingView.setChosenWorker(w1p3);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2,1), new Position(3,1)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(2,1), w1p3.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Minotaur pushes backward\r\n        testingView.setChosenWorker(w2p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0,2), new Position(1,3)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(0,2), w2p1.getPosition(), \"should return the correct position\"),\r\n                () -> assertEquals(new Position(0,1), w1p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Pan moves up\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL2));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(3,2), new Position(3,3)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(3,2), w2p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Apollo swaps workers\r\n        testingView.setChosenWorker(w2p3);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(3,2), new Position(2,2)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertNotEquals(new Position(3,2), w2p3.getPosition(), \"should return the correct position\"),\r\n                () -> assertEquals(new Position(2,3), w2p3.getPosition(), \"should stay in its original position\"),\r\n                () -> assertNotEquals(new Position(2,3), w2p2.getPosition(), \"should return the correct position\"),\r\n                () -> assertEquals(new Position(3,2), w2p2.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Minotaur performs a normal turn\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1,0), new Position(0,0)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(1,0), w1p1.getPosition(), \"should return the correct position\")\r\n        );\r\n\r\n        //Player with Pan moves down and wins\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenPositions(Collections.singletonList(new Position(4, 1)));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertAll(\r\n                () -> assertEquals(new Position(4,1), w2p2.getPosition(), \"should return the correct position\")\r\n        );\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/it/polimi/ingsw/santorini/model/MinotaurPanApolloTest.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/test/java/it/polimi/ingsw/santorini/model/MinotaurPanApolloTest.java	(date 1593646839269)
+@@ -37,7 +37,7 @@
+ 
+     @Test
+     void test() {
+-        Integer selectedCardId1 = 8, selectedCardId2 = 20, selectedCardId3 = 1;
++        Integer selectedCardId1 = 8, selectedCardId2 = 9, selectedCardId3 = 1;
+         ArrayList<Player> players;
+         Worker w1p1, w2p1, w1p2, w2p2, w1p3, w2p3;
+ 
+@@ -194,15 +194,15 @@
+                 () -> assertEquals(new Position(3,2), w2p2.getPosition(), "should return the correct position")
+         );
+ 
+-        //Player with Apollo swaps workers
++        //Player with Apollo can't swap workers
+         testingView.setChosenWorker(w2p3);
+         testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));
+-        testingView.setChosenPositions(Arrays.asList(new Position(3,2), new Position(2,2)));
++        testingView.setChosenPositions(Arrays.asList(new Position(3,2), new Position(1,2), new Position(2,2)));
+         game.handleTurn(playersHandler.next(), null);
+ 
+         assertAll(
+                 () -> assertNotEquals(new Position(3,2), w2p3.getPosition(), "should return the correct position"),
+-                () -> assertEquals(new Position(2,3), w2p3.getPosition(), "should stay in its original position"),
++                () -> assertEquals(new Position(1,2), w2p3.getPosition(), "should stay in its original position"),
+                 () -> assertNotEquals(new Position(2,3), w2p2.getPosition(), "should return the correct position"),
+                 () -> assertEquals(new Position(3,2), w2p2.getPosition(), "should return the correct position")
+         );
+@@ -219,11 +219,7 @@
+ 
+         //Player with Pan moves down and wins
+         testingView.setChosenWorker(w2p2);
+-        testingView.setChosenPositions(Collections.singletonList(new Position(4, 1)));
+-        game.handleTurn(playersHandler.next(), null);
+-
+-        assertAll(
+-                () -> assertEquals(new Position(4,1), w2p2.getPosition(), "should return the correct position")
+-        );
++        testingView.setChosenPositions(Arrays.asList(new Position(4, 1), new Position(4, 0)));
++        game.handleTurn(playersHandler.next(), win -> assertTrue(win, "player with Pan should have won"));
+     }
+ }
+Index: src/main/java/it/polimi/ingsw/santorini/communication/KickMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.communication;\r\n\r\nimport java.io.Serializable;\r\n\r\n/**\r\n * Brief Message exchanged when the game isn't over but there's a loser who must be kicked out from the game\r\n */\r\npublic class KickMessage implements Serializable {\r\n    private static final String message = \"You've been kicked out of the game\";\r\n\r\n    public static String getMessage() {\r\n        return message;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/KickMessage.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/communication/KickMessage.java	(date 1593646839295)
+@@ -1,11 +1,10 @@
+ package it.polimi.ingsw.santorini.communication;
+ 
+-import java.io.Serializable;
+ 
+ /**
+  * Brief Message exchanged when the game isn't over but there's a loser who must be kicked out from the game
+  */
+-public class KickMessage implements Serializable {
++public class KickMessage extends SerializableMessage  {
+     private static final String message = "You've been kicked out of the game";
+ 
+     public static String getMessage() {
+Index: src/test/java/it/polimi/ingsw/santorini/model/HeraPanTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.model;\r\n\r\nimport it.polimi.ingsw.santorini.controller.CardLoader;\r\nimport it.polimi.ingsw.santorini.testing.controller.TestingController;\r\nimport it.polimi.ingsw.santorini.testing.view.TestingView;\r\nimport org.junit.jupiter.api.*;\r\n\r\nimport java.util.ArrayList;\r\nimport java.util.Arrays;\r\nimport java.util.Collections;\r\nimport java.util.List;\r\n\r\nimport static org.junit.jupiter.api.Assertions.assertAll;\r\nimport static org.junit.jupiter.api.Assertions.assertEquals;\r\nimport static org.junit.jupiter.api.Assertions.assertFalse;\r\nimport static org.junit.jupiter.api.Assertions.assertTrue;\r\n\r\n@TestInstance(TestInstance.Lifecycle.PER_CLASS)\r\nclass HeraPanTest {\r\n    GameDelegate delegate;\r\n    SantoriniGame game;\r\n    PlayersHandler playersHandler;\r\n    Integer numberOfPlayers;\r\n    TestingView testingView;\r\n\r\n    @BeforeAll\r\n    void init() {\r\n        numberOfPlayers = 2;\r\n        delegate = new TestingController();\r\n        game = new SantoriniGame(delegate, numberOfPlayers);\r\n        SantoriniGame.createMap();\r\n        CardLoader.loadCards();\r\n        playersHandler = game.getPlayersHandler();\r\n        testingView = TestingController.getTestingView();\r\n        testingView.setGameMode(2);\r\n        testingView.setNumOfPlayers(numberOfPlayers);\r\n    }\r\n\r\n    @Test\r\n    void test() {\r\n        Integer selectedCardId1 = 20, selectedCardId2 = 9;\r\n        ArrayList<Player> players;\r\n        Worker w1p1, w1p2, w2p2;\r\n\r\n        testingView.setChosenCardsIds(Arrays.asList(selectedCardId2, selectedCardId1));\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3)));\r\n        game.setupGame();\r\n        players = PlayersHandler.getPlayers();\r\n        w1p1 = players.get(1).getWorkers().get(0);\r\n        w1p2 = players.get(0).getWorkers().get(0);\r\n        w2p2 = players.get(0).getWorkers().get(1);\r\n\r\n        //Player with Pan performs a normal turn\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 1), new Position(0, 2)));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        game.handleTurn(PlayersHandler.getCurrentPlayer(), null);\r\n\r\n        //Player with Hera performs a normal turn\r\n        testingView.setChosenWorker(w2p2);\r\n        testingView.setChosenPositions(Arrays.asList(new Position(1, 3), new Position(1, 2)));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        //Player with Pan moves up\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 2), new Position(1, 2)));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL2));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        //Player with Hera performs a normal turn\r\n        testingView.setChosenWorker(w1p2);\r\n        testingView.setChosenPositions(Arrays.asList(new Position(2, 2), new Position(2, 1)));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        //Pan shouldn't win because climbed down two levels into a perimeter Cell\r\n        testingView.setChosenWorker(w1p1);\r\n        testingView.setChosenPositions(Arrays.asList(new Position(0, 1), new Position(0, 0)));\r\n        testingView.setChosenBlockTypes(Collections.singletonList(BlockType.LEVEL1));\r\n        game.handleTurn(playersHandler.next(), null);\r\n\r\n        assertEquals(new Position(0, 1), w1p1.getPosition(), \"Worker should still be on the map\");\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/it/polimi/ingsw/santorini/model/HeraPanTest.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/test/java/it/polimi/ingsw/santorini/model/HeraPanTest.java	(date 1593646839310)
+@@ -43,12 +43,12 @@
+         Worker w1p1, w1p2, w2p2;
+ 
+         testingView.setChosenCardsIds(Arrays.asList(selectedCardId2, selectedCardId1));
+-        testingView.setChosenPositions(Arrays.asList(new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3)));
++        testingView.setChosenPositions(Arrays.asList( new Position(0, 0), new Position(0, 3), new Position(1, 1), new Position(2, 3)));
+         game.setupGame();
+         players = PlayersHandler.getPlayers();
+-        w1p1 = players.get(1).getWorkers().get(0);
+-        w1p2 = players.get(0).getWorkers().get(0);
+-        w2p2 = players.get(0).getWorkers().get(1);
++        w1p1 = players.get(0).getWorkers().get(0);
++        w1p2 = players.get(1).getWorkers().get(0);
++        w2p2 = players.get(1).getWorkers().get(1);
+ 
+         //Player with Pan performs a normal turn
+         testingView.setChosenWorker(w1p1);
+Index: src/main/java/it/polimi/ingsw/santorini/communication/NetworkMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package it.polimi.ingsw.santorini.communication;\r\n\r\npublic enum NetworkMessage {\r\n    startRefusal(\"There are not enough players to start a game\"),\r\n    startConfirmation(\"Game is starting...\"),\r\n    badInput(\"Not valid input.\"),\r\n    host(\"You are the host\"),\r\n    sizeChanged(\"Changed lobby size\"),\r\n    sizeNotChanged(\"Can't change lobby size\"),\r\n    waitStart(\"Wait for the host to start a new game\"),\r\n    demandInput(\"Enter one of the listed commands\"),\r\n    waitVote(\"Wait until the other players finish to vote\"),\r\n    waitTurn(\"Wait until it is your turn\"),\r\n    waitChoice(\"Wait until the other players finish to make their choice\");\r\n\r\n    private final String message;\r\n\r\n    NetworkMessage(String message) {\r\n        this.message = message;\r\n    }\r\n\r\n    public String getMessage() {\r\n        return message;\r\n    }\r\n\r\n    public static Integer intValueOf(NetworkMessage message){\r\n        NetworkMessage[] values = NetworkMessage.values();\r\n        for(int i = 0; i < values.length; i++)\r\n            if(message.equals(values[i]))\r\n                return i;\r\n        return null;\r\n    }\r\n\r\n    public static NetworkMessage byId(Integer id) {\r\n        return NetworkMessage.values()[id];\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/it/polimi/ingsw/santorini/communication/NetworkMessage.java	(revision 316ab13f4568342bca9f8f355f61f5372dc120e3)
++++ src/main/java/it/polimi/ingsw/santorini/communication/NetworkMessage.java	(date 1593646839326)
+@@ -1,5 +1,8 @@
+ package it.polimi.ingsw.santorini.communication;
+ 
++/**
++ * Brief Enum for the print of a specific message on the client side
++ */
+ public enum NetworkMessage {
+     startRefusal("There are not enough players to start a game"),
+     startConfirmation("Game is starting..."),

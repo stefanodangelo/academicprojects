@@ -1,0 +1,80 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ApplicableBRules</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules.applicable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ApplicableBRules (it.polimi.ingsw.santorini.model.gameoperations.rules.applicable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ApplicableBRules</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules.applicable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.BlockType;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.Player;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.Position;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.BRules;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.BState;
+<i>8</i>&nbsp;
+<i>9</i>&nbsp;import java.util.List;
+<i>10</i>&nbsp;
+<i>11</i>&nbsp;/**
+<i>12</i>&nbsp; * Brief Dedicated ApplicableRules for the Build operation
+<i>13</i>&nbsp; * @see it.polimi.ingsw.santorini.model.gameoperations.Build
+<i>14</i>&nbsp; */
+<i>15</i>&nbsp;public interface ApplicableBRules extends ApplicableRules&lt;BState, BRules&gt; {
+<i>16</i>&nbsp;
+<i>17</i>&nbsp;    /**
+<i>18</i>&nbsp;     * Brief The application method for the allowedPositions Build rule
+<i>19</i>&nbsp;     * @return List&lt;Position&gt; the list of allowed positions for the building process
+<i>20</i>&nbsp;     */
+<i>21</i>&nbsp;    List&lt;Position&gt; applyAllowedPositions();
+<i>22</i>&nbsp;
+<i>23</i>&nbsp;    /**
+<i>24</i>&nbsp;     * Brief The application method for the allowedBlockTypes Build rule
+<i>25</i>&nbsp;     * @return List&lt;Position&gt; the list of allowed block types for the building process
+<i>26</i>&nbsp;     */
+<i>27</i>&nbsp;    List&lt;BlockType&gt; applyAllowedBlockTypes();
+<i>28</i>&nbsp;
+<i>29</i>&nbsp;    /**
+<i>30</i>&nbsp;     * Brief The application method for the building Build rule. It actually produces building effects on the game state
+<i>31</i>&nbsp;     */
+<i>32</i>&nbsp;    void applyBuilding();
+<i>33</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

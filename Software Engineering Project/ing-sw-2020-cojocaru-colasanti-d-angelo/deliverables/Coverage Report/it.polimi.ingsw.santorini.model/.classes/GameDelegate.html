@@ -1,0 +1,86 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: GameDelegate</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model</a> ]
+</div>
+
+<h1>Coverage Summary for Class: GameDelegate (it.polimi.ingsw.santorini.model)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">GameDelegate</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;
+<i>4</i>&nbsp;import java.util.ArrayList;
+<i>5</i>&nbsp;import java.util.List;
+<i>6</i>&nbsp;import java.util.function.Consumer;
+<i>7</i>&nbsp;
+<i>8</i>&nbsp;/**
+<i>9</i>&nbsp; * Brief Bridge between SantoriniGame and the Controller
+<i>10</i>&nbsp; *       It&#39;s responsible for the three main parts of the game: -setup
+<i>11</i>&nbsp; *                                                              -move &amp; build
+<i>12</i>&nbsp; *                                                              -rendering
+<i>13</i>&nbsp; */
+<i>14</i>&nbsp;public interface GameDelegate {
+<i>15</i>&nbsp;    GameMode requestGameMode(Integer playerId);
+<i>16</i>&nbsp;    void requestPlayersNames(Consumer&lt;List&lt;String&gt;&gt; onCompletion);
+<i>17</i>&nbsp;    void requestPlayerColor(Integer playerId, Consumer&lt;String&gt; onCompletion);
+<i>18</i>&nbsp;    void sendPoll(List&lt;Integer&gt; playersIds, Poll poll, Consumer&lt;List&lt;Integer&gt;&gt; onCompletion);
+<i>19</i>&nbsp;    void requestFirstPlayerChoice(Integer playerId, ArrayList&lt;Player&gt; players, Consumer&lt;Integer&gt; onCompletion);
+<i>20</i>&nbsp;    void requestCardsSelection(Integer playerId, ArrayList&lt;Card&gt; cards, Integer numberOfSelections, Consumer&lt;List&lt;Integer&gt;&gt; onCompletion);
+<i>21</i>&nbsp;    void onBoardChanged(Cell[][] board, List&lt;Position&gt; validPositions);
+<i>22</i>&nbsp;
+<i>23</i>&nbsp;    // Game operations:
+<i>24</i>&nbsp;    void workerSelection(Integer currentPlayerId, List&lt;Worker&gt; workers, Consumer&lt;Worker&gt; onCompletion);
+<i>25</i>&nbsp;    void positionSelection(Integer currentPlayerId, List&lt;Position&gt; allowedPositions, String turnPhase, Position currentPosition, Consumer&lt;Position&gt; onCompletion);
+<i>26</i>&nbsp;    void blockTypeSelection(Integer currentPlayerId, List&lt;BlockType&gt; blockTypes, Consumer&lt;BlockType&gt; onCompletion);
+<i>27</i>&nbsp;    void executingGameOperation(String gameOperation);
+<i>28</i>&nbsp;    void areOptionalOperationsSkipped(Integer currentPlayerId, String operationType, Consumer&lt;Boolean&gt; onCompletion);
+<i>29</i>&nbsp;    void onVictoryCondition(Integer playerId, String message, Boolean gameOver);
+<i>30</i>&nbsp;    void onActiveWorker(Worker worker);
+<i>31</i>&nbsp;    void onCardsSelected(List&lt;Card&gt; cards);
+<i>32</i>&nbsp;    void onTurnOver();
+<i>33</i>&nbsp;
+<i>34</i>&nbsp;    // Undo
+<i>35</i>&nbsp;    /**
+<i>36</i>&nbsp;     * Brief called when turn is completed to ask for confirmation or undo
+<i>37</i>&nbsp;     */
+<i>38</i>&nbsp;    void requestUndoOrConfirm(Consumer&lt;Boolean&gt; onCompletion);
+<i>39</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

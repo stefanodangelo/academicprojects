@@ -1,0 +1,216 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: Expansion</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.expansion</a> ]
+</div>
+
+<h1>Coverage Summary for Class: Expansion (it.polimi.ingsw.santorini.model.gameoperations.expansion)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Expansion</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    41,7%
+  </span>
+  <span class="absValue">
+    (5/ 12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    36,4%
+  </span>
+  <span class="absValue">
+    (12/ 33)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.expansion;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import java.util.ArrayList;
+<i>4</i>&nbsp;import java.util.Arrays;
+<i>5</i>&nbsp;import java.util.List;
+<i>6</i>&nbsp;
+<i>7</i>&nbsp;/**
+<i>8</i>&nbsp; * Brief Represents an expansion that has a custom object, a type (can be expansive or restrictive), one or more markers
+<i>9</i>&nbsp; * @param &lt;T&gt; The type of the object being wrapped in the expansion
+<i>10</i>&nbsp; * @param &lt;S&gt; The type of the markers that can be coupled with the expansion
+<i>11</i>&nbsp; */
+<i>12</i>&nbsp;public class Expansion&lt;T, S&gt; {
+<i>13</i>&nbsp;    private final T object;
+<i>14</i>&nbsp;    private ExpansionType type;
+<i>15</i>&nbsp;    private List&lt;S&gt; markers;
+<i>16</i>&nbsp;
+<i>17</i>&nbsp;    /**
+<i>18</i>&nbsp;     * Brief Constructor that sets the object, the type and the list of markers for the expansion
+<i>19</i>&nbsp;     * @param object The object involved
+<i>20</i>&nbsp;     * @param type The expansion type involved
+<i>21</i>&nbsp;     * @param markers The list of markers coupled with the expansion
+<i>22</i>&nbsp;     */
+<b class="nc"><i>23</i>&nbsp;    public Expansion(T object, ExpansionType type, List&lt;S&gt; markers) {</b>
+<b class="nc"><i>24</i>&nbsp;        this.object = object;</b>
+<b class="nc"><i>25</i>&nbsp;        this.type = type;</b>
+<b class="nc"><i>26</i>&nbsp;        this.markers = new ArrayList&lt;&gt;(markers);</b>
+<b class="nc"><i>27</i>&nbsp;    }</b>
+<i>28</i>&nbsp;
+<i>29</i>&nbsp;    /**
+<i>30</i>&nbsp;     * Brief Constructor that sets the object and the expansion type
+<i>31</i>&nbsp;     * @param object The object involved
+<i>32</i>&nbsp;     * @param type The expansion type involved
+<i>33</i>&nbsp;     */
+<b class="nc"><i>34</i>&nbsp;    public Expansion(T object, ExpansionType type) {</b>
+<b class="nc"><i>35</i>&nbsp;        this.object = object;</b>
+<b class="nc"><i>36</i>&nbsp;        this.type = type;</b>
+<b class="nc"><i>37</i>&nbsp;    }</b>
+<i>38</i>&nbsp;
+<i>39</i>&nbsp;    /**
+<i>40</i>&nbsp;     * Brief Constructor that sets the object, the expansion type through a Boolean and the list of markers for the
+<i>41</i>&nbsp;     * expansion
+<i>42</i>&nbsp;     * @param object The object involved
+<i>43</i>&nbsp;     * @param expansive The expansion type as a Boolean, it must be true to request expansive, false for restrictive
+<i>44</i>&nbsp;     * @param markers The list of markers coupled with the expansion
+<i>45</i>&nbsp;     */
+<b class="fc"><i>46</i>&nbsp;    public Expansion(T object, Boolean expansive, List&lt;S&gt; markers) {</b>
+<b class="fc"><i>47</i>&nbsp;        this.object = object;</b>
+<b class="fc"><i>48</i>&nbsp;        this.type = ExpansionType.byBoolean(expansive);</b>
+<b class="fc"><i>49</i>&nbsp;        this.markers = new ArrayList&lt;&gt;(markers);</b>
+<b class="fc"><i>50</i>&nbsp;    }</b>
+<i>51</i>&nbsp;
+<i>52</i>&nbsp;    /**
+<i>53</i>&nbsp;     * Brief Constructor that sets the object, the expansion type through a Boolean and the list of markers for the
+<i>54</i>&nbsp;     * expansion as varargs
+<i>55</i>&nbsp;     * @param object The object involved
+<i>56</i>&nbsp;     * @param expansive The expansion type as a Boolean, it must be true to request expansive, false for restrictive
+<i>57</i>&nbsp;     * @param markers The list of markers coupled with the expansion as varargs
+<i>58</i>&nbsp;     */
+<i>59</i>&nbsp;    @SafeVarargs
+<i>60</i>&nbsp;    public Expansion(T object, Boolean expansive, S... markers) {
+<b class="nc"><i>61</i>&nbsp;        this(object, expansive, Arrays.asList(markers));</b>
+<b class="nc"><i>62</i>&nbsp;    }</b>
+<i>63</i>&nbsp;
+<i>64</i>&nbsp;    /**
+<i>65</i>&nbsp;     * Brief Constructor that sets the object and the expansion type as Boolean
+<i>66</i>&nbsp;     * @param object The object involved
+<i>67</i>&nbsp;     * @param expansive The expansion type as a Boolean, it must be true to request expansive, false for restrictive
+<i>68</i>&nbsp;     */
+<b class="nc"><i>69</i>&nbsp;    public Expansion(T object, Boolean expansive) {</b>
+<b class="nc"><i>70</i>&nbsp;        this.object = object;</b>
+<b class="nc"><i>71</i>&nbsp;        this.type = ExpansionType.byBoolean(expansive);</b>
+<b class="nc"><i>72</i>&nbsp;    }</b>
+<i>73</i>&nbsp;
+<i>74</i>&nbsp;    /**
+<i>75</i>&nbsp;     * Brief Constructor that sets the object and the list of markers for the expansion
+<i>76</i>&nbsp;     * @param object The object involved
+<i>77</i>&nbsp;     * @param markers The list of expansions involved
+<i>78</i>&nbsp;     */
+<b class="fc"><i>79</i>&nbsp;    public Expansion(T object, List&lt;S&gt; markers) {</b>
+<b class="fc"><i>80</i>&nbsp;        this.object = object;</b>
+<b class="fc"><i>81</i>&nbsp;        this.markers = new ArrayList&lt;&gt;(markers);</b>
+<b class="fc"><i>82</i>&nbsp;    }</b>
+<i>83</i>&nbsp;
+<i>84</i>&nbsp;    /**
+<i>85</i>&nbsp;     * Brief Constructor that sets the object and the list of markers for the expansion as varargs
+<i>86</i>&nbsp;     * @param object The object involved
+<i>87</i>&nbsp;     * @param markers The list of expansions involved as varargs
+<i>88</i>&nbsp;     */
+<i>89</i>&nbsp;    @SafeVarargs
+<i>90</i>&nbsp;    public Expansion(T object, S... markers) {
+<b class="nc"><i>91</i>&nbsp;        this(object, Arrays.asList(markers));</b>
+<b class="nc"><i>92</i>&nbsp;    }</b>
+<i>93</i>&nbsp;
+<i>94</i>&nbsp;    /**
+<i>95</i>&nbsp;     * Brief Constructor that sets the object
+<i>96</i>&nbsp;     * @param object The object involved
+<i>97</i>&nbsp;     */
+<b class="nc"><i>98</i>&nbsp;    public Expansion(T object) {</b>
+<b class="nc"><i>99</i>&nbsp;        this.object = object;</b>
+<b class="nc"><i>100</i>&nbsp;    }</b>
+<i>101</i>&nbsp;
+<i>102</i>&nbsp;    /**
+<i>103</i>&nbsp;     * Brief Getter for the markers&#39; list
+<i>104</i>&nbsp;     * @return List list of markers coupled with the expansion
+<i>105</i>&nbsp;     */
+<i>106</i>&nbsp;    public List&lt;S&gt; getMarkers() {
+<b class="fc"><i>107</i>&nbsp;        return markers;</b>
+<i>108</i>&nbsp;    }
+<i>109</i>&nbsp;
+<i>110</i>&nbsp;    /**
+<i>111</i>&nbsp;     * Brief Getter for the expansion object
+<i>112</i>&nbsp;     * @return T the expansion object
+<i>113</i>&nbsp;     */
+<i>114</i>&nbsp;    public T getObject() {
+<b class="fc"><i>115</i>&nbsp;        return object;</b>
+<i>116</i>&nbsp;    }
+<i>117</i>&nbsp;
+<i>118</i>&nbsp;    /**
+<i>119</i>&nbsp;     * Brief Getter for the type of the expansion
+<i>120</i>&nbsp;     * @return ExpansionType the type of the expansion
+<i>121</i>&nbsp;     */
+<i>122</i>&nbsp;    public ExpansionType getType() {
+<b class="fc"><i>123</i>&nbsp;        return type;</b>
+<i>124</i>&nbsp;    }
+<i>125</i>&nbsp;
+<i>126</i>&nbsp;    /**
+<i>127</i>&nbsp;     * Brief Checker that tells if the expansion has a type set
+<i>128</i>&nbsp;     * @return Boolean true if the expansion&#39;s type is not null, false otherwise
+<i>129</i>&nbsp;     */
+<i>130</i>&nbsp;    public Boolean hasType() {
+<b class="nc"><i>131</i>&nbsp;        return type != null;</b>
+<i>132</i>&nbsp;    }
+<i>133</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

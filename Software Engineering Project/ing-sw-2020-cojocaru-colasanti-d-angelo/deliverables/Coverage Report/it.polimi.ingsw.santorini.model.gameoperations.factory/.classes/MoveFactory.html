@@ -1,0 +1,331 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: MoveFactory</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.factory</a> ]
+</div>
+
+<h1>Coverage Summary for Class: MoveFactory (it.polimi.ingsw.santorini.model.gameoperations.factory)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">MoveFactory</td>
+<td class="coverageStat">
+  <span class="percent">
+    80%
+  </span>
+  <span class="absValue">
+    (20/ 25)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    89,9%
+  </span>
+  <span class="absValue">
+    (62/ 69)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">MoveFactory$MoveEffect</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (3/ 3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (13/ 13)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    82,1%
+  </span>
+  <span class="absValue">
+    (23/ 28)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    91,5%
+  </span>
+  <span class="absValue">
+    (75/ 82)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.factory;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.Cell;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.GameMap;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.GameObject;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.Position;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameMarker;
+<i>8</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.Move;
+<i>9</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.custom.GameOperationParameters;
+<i>10</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.ConsumerExpansion;
+<i>11</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.PredicateExpansion;
+<i>12</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.MRules;
+<i>13</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.factory.DefaultMoveFactory;
+<i>14</i>&nbsp;
+<i>15</i>&nbsp;import java.util.ArrayList;
+<i>16</i>&nbsp;import java.util.Arrays;
+<i>17</i>&nbsp;import java.util.HashMap;
+<i>18</i>&nbsp;import java.util.Map;
+<i>19</i>&nbsp;import java.util.function.Consumer;
+<i>20</i>&nbsp;import java.util.function.Function;
+<i>21</i>&nbsp;
+<i>22</i>&nbsp;/**
+<i>23</i>&nbsp; * Brief MoveFactory for generating cards effects loadable from external file
+<i>24</i>&nbsp; */
+<b class="nc"><i>25</i>&nbsp;public abstract class MoveFactory {</b>
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    /**
+<i>28</i>&nbsp;     * Brief the dictionary of the Move effects
+<i>29</i>&nbsp;     */
+<i>30</i>&nbsp;    private static Map&lt;String, Function&lt;GameOperationParameters, Move&gt;&gt; moveEffects;
+<i>31</i>&nbsp;
+<i>32</i>&nbsp;    /**
+<i>33</i>&nbsp;     * Brief tells if the dictionary has been already loaded
+<i>34</i>&nbsp;     */
+<b class="fc"><i>35</i>&nbsp;    private static Boolean loaded = false;</b>
+<i>36</i>&nbsp;
+<i>37</i>&nbsp;    /**
+<i>38</i>&nbsp;     * Brief Enum that collects each effect with its corresponding rules generation function
+<i>39</i>&nbsp;     */
+<b class="fc"><i>40</i>&nbsp;    public enum MoveEffect {</b>
+<b class="fc"><i>41</i>&nbsp;        DefaultMove(&quot;defaultMove&quot;, MoveFactory::defaultMove),</b>
+<b class="fc"><i>42</i>&nbsp;        OccupiedPositionsToo(&quot;occupiedPositionsToo&quot;, MoveFactory::occupiedPositionsToo),</b>
+<b class="fc"><i>43</i>&nbsp;        StoreInitialPosition(&quot;storeInitialPosition&quot;, MoveFactory::storeInitialPosition),</b>
+<b class="fc"><i>44</i>&nbsp;        ExcludingStoredPosition(&quot;excludingStoredPosition&quot;, MoveFactory::excludingStoredPosition),</b>
+<b class="fc"><i>45</i>&nbsp;        TheOnlyOneMovingUp(&quot;theOnlyOneMovingUp&quot;, MoveFactory::theOnlyOneMovingUp),</b>
+<b class="fc"><i>46</i>&nbsp;        ForceEnemyBackwards(&quot;forceEnemyBackwards&quot;, MoveFactory::forceEnemyBackwards),</b>
+<b class="fc"><i>47</i>&nbsp;        WinIfDownTwoLevels(&quot;winIfDownTwoLevels&quot;, MoveFactory::winIfDownTwoLevels),</b>
+<b class="fc"><i>48</i>&nbsp;        NoWinIfEnemyOnPerimeter(&quot;noWinIfEnemyOnPerimeter&quot;, MoveFactory::noWinIfEnemyOnPerimeter)</b>
+<i>49</i>&nbsp;        ;
+<i>50</i>&nbsp;
+<i>51</i>&nbsp;        /**
+<i>52</i>&nbsp;         * Brief the name of the effect
+<i>53</i>&nbsp;         */
+<i>54</i>&nbsp;        private final String name;
+<i>55</i>&nbsp;
+<i>56</i>&nbsp;        /**
+<i>57</i>&nbsp;         * Brief the rules&#39; generation function
+<i>58</i>&nbsp;         */
+<i>59</i>&nbsp;        private final Consumer&lt;MRules&gt; effect;
+<i>60</i>&nbsp;
+<i>61</i>&nbsp;        /**
+<i>62</i>&nbsp;         * Brief Main constructor for name and rules&#39; generation function
+<i>63</i>&nbsp;         * @param name the name of the effect
+<i>64</i>&nbsp;         * @param effect the rules&#39; generation function
+<i>65</i>&nbsp;         */
+<b class="fc"><i>66</i>&nbsp;        MoveEffect(String name, Consumer&lt;MRules&gt; effect) {</b>
+<b class="fc"><i>67</i>&nbsp;            this.name = name;</b>
+<b class="fc"><i>68</i>&nbsp;            this.effect = effect;</b>
+<b class="fc"><i>69</i>&nbsp;        }</b>
+<i>70</i>&nbsp;    }
+<i>71</i>&nbsp;
+<i>72</i>&nbsp;    /**
+<i>73</i>&nbsp;     * Brief loads all the effects contained in the MoveEffect enum
+<i>74</i>&nbsp;     */
+<i>75</i>&nbsp;    public static void loadEffects() {
+<b class="fc"><i>76</i>&nbsp;        moveEffects = new HashMap&lt;&gt;();</b>
+<b class="fc"><i>77</i>&nbsp;        new ArrayList&lt;&gt;(Arrays.asList(MoveEffect.values())).forEach(effect -&gt;</b>
+<b class="fc"><i>78</i>&nbsp;                moveEffects.put(effect.name, getCustomEffect(effect.effect)));</b>
+<b class="fc"><i>79</i>&nbsp;    }</b>
+<i>80</i>&nbsp;
+<i>81</i>&nbsp;    /**
+<i>82</i>&nbsp;     * Brief Returns the requested by name effect
+<i>83</i>&nbsp;     * @param name the effect name
+<i>84</i>&nbsp;     * @param params the customization parameters
+<i>85</i>&nbsp;     * @return the customized Move
+<i>86</i>&nbsp;     */
+<i>87</i>&nbsp;    public static Move getMove(String name, GameOperationParameters params) {
+<b class="fc"><i>88</i>&nbsp;        if (!loaded) {</b>
+<b class="fc"><i>89</i>&nbsp;            loadEffects();</b>
+<b class="fc"><i>90</i>&nbsp;            loaded = true;</b>
+<i>91</i>&nbsp;        }
+<b class="fc"><i>92</i>&nbsp;        return moveEffects.get(name).apply(params);</b>
+<i>93</i>&nbsp;    }
+<i>94</i>&nbsp;
+<i>95</i>&nbsp;    /**
+<i>96</i>&nbsp;     * Brief Return the default Move with default rules
+<i>97</i>&nbsp;     * @return Move the default Move
+<i>98</i>&nbsp;     */
+<i>99</i>&nbsp;    public static Move getDefaultMove() {
+<b class="nc"><i>100</i>&nbsp;        Move op = new Move();</b>
+<b class="nc"><i>101</i>&nbsp;        op.requiresWorkerSelection();</b>
+<b class="nc"><i>102</i>&nbsp;        return op;</b>
+<i>103</i>&nbsp;    }
+<i>104</i>&nbsp;
+<i>105</i>&nbsp;    /**
+<i>106</i>&nbsp;     * Brief Returns a customizable effect from a effect applier
+<i>107</i>&nbsp;     * @param effectApplier The effect applier
+<i>108</i>&nbsp;     * @return the customizable effect
+<i>109</i>&nbsp;     */
+<i>110</i>&nbsp;    public static Function&lt;GameOperationParameters, Move&gt; getCustomEffect(Consumer&lt;MRules&gt; effectApplier) {
+<b class="fc"><i>111</i>&nbsp;        return (params) -&gt; {</b>
+<b class="fc"><i>112</i>&nbsp;            MRules rules = new MRules(params.getHasDefaultRules());</b>
+<b class="fc"><i>113</i>&nbsp;            effectApplier.accept(rules);</b>
+<b class="fc"><i>114</i>&nbsp;            Move move = new Move(rules.asApplicable(), params.isOptional());</b>
+<b class="fc"><i>115</i>&nbsp;            if (params.getRequiresWorkerSelection()) move.requiresWorkerSelection();</b>
+<b class="fc"><i>116</i>&nbsp;            return move;</b>
+<i>117</i>&nbsp;        };
+<i>118</i>&nbsp;    }
+<i>119</i>&nbsp;
+<i>120</i>&nbsp;    /**
+<i>121</i>&nbsp;     * Brief The default Move effect applier
+<i>122</i>&nbsp;     * @param r rules
+<i>123</i>&nbsp;     */
+<b class="fc"><i>124</i>&nbsp;    public static void defaultMove(MRules r) {}</b>
+<i>125</i>&nbsp;
+<i>126</i>&nbsp;    /**
+<i>127</i>&nbsp;     * Brief Effect applier for being able to move on opponent-occupied positions too
+<i>128</i>&nbsp;     * @param r rules
+<i>129</i>&nbsp;     */
+<i>130</i>&nbsp;    public static void occupiedPositionsToo(MRules r) {
+<b class="fc"><i>131</i>&nbsp;        r.allowedPositions().removeExpansion(DefaultMoveFactory.Index.NoOccupied.getIndex());</b>
+<i>132</i>&nbsp;
+<b class="fc"><i>133</i>&nbsp;        r.allowedPositions().overwriteExpansion(new PredicateExpansion&lt;&gt;(s -&gt; {</b>
+<b class="fc"><i>134</i>&nbsp;            Cell finalCell = s.map().cellAt(s.chosenPosition());</b>
+<b class="fc"><i>135</i>&nbsp;            return !finalCell.isOccupied() || !finalCell.getOccupantId().equals(s.currentPlayer().getId());</b>
+<b class="fc"><i>136</i>&nbsp;        }, false, GameMarker.defaultMarker()), DefaultMoveFactory.Index.NoOccupied.getIndex());</b>
+<i>137</i>&nbsp;
+<b class="fc"><i>138</i>&nbsp;        r.movement().addExpansionFirst(new ConsumerExpansion&lt;&gt;(s -&gt; {</b>
+<b class="fc"><i>139</i>&nbsp;            if (s.map().cellAt(s.chosenPosition()).isOccupied()) {</b>
+<b class="fc"><i>140</i>&nbsp;                GameObject enemyWorker = s.map().cellAt(s.chosenPosition()).popGameObject();</b>
+<b class="fc"><i>141</i>&nbsp;                s.map().floatObject(enemyWorker, s.initialPosition());}}, GameMarker.defaultMarker()));</b>
+<i>142</i>&nbsp;
+<b class="fc"><i>143</i>&nbsp;        r.movement().addExpansion(new ConsumerExpansion&lt;&gt;(s -&gt;</b>
+<b class="fc"><i>144</i>&nbsp;                s.map().cellAt(s.initialPosition()).pushFloatingObject(), GameMarker.defaultMarker()));</b>
+<b class="fc"><i>145</i>&nbsp;    }</b>
+<i>146</i>&nbsp;
+<i>147</i>&nbsp;    /**
+<i>148</i>&nbsp;     * Brief Effect applier for being able to store the initial worker position (before moving)
+<i>149</i>&nbsp;     * @param r rules
+<i>150</i>&nbsp;     */
+<i>151</i>&nbsp;    public static void storeInitialPosition(MRules r) {
+<b class="fc"><i>152</i>&nbsp;        r.movement().addExpansion(new ConsumerExpansion&lt;&gt;(s -&gt; s.result().setActivePosition(s.initialPosition()), GameMarker.defaultMarker()));</b>
+<b class="fc"><i>153</i>&nbsp;    }</b>
+<i>154</i>&nbsp;
+<i>155</i>&nbsp;    /**
+<i>156</i>&nbsp;     * Brief Effect applier for being able to exclude the stored position from choice
+<i>157</i>&nbsp;     * @param r rules
+<i>158</i>&nbsp;     */
+<i>159</i>&nbsp;    public static void excludingStoredPosition(MRules r) {
+<b class="fc"><i>160</i>&nbsp;        r.allowedPositions().addExpansion(new PredicateExpansion&lt;&gt;(s -&gt; !s.chosenPosition().equals(s.activePosition())</b>
+<b class="fc"><i>161</i>&nbsp;                , false, GameMarker.defaultMarker()));</b>
+<b class="fc"><i>162</i>&nbsp;    }</b>
+<i>163</i>&nbsp;
+<i>164</i>&nbsp;    /**
+<i>165</i>&nbsp;     * Brief Effect applier for being able to be the only one moving up. If you move up, the others will not
+<i>166</i>&nbsp;     * @param r rules
+<i>167</i>&nbsp;     */
+<i>168</i>&nbsp;    public static void theOnlyOneMovingUp(MRules r) {
+<b class="fc"><i>169</i>&nbsp;        r.movement().addExpansion(new ConsumerExpansion&lt;&gt;(s -&gt; {</b>
+<b class="fc"><i>170</i>&nbsp;            if (s.map().getLevelDifference(s.chosenPosition(), s.initialPosition()) &gt;= 1) {</b>
+<b class="fc"><i>171</i>&nbsp;                int a = 2;</b>
+<b class="fc"><i>172</i>&nbsp;                s.result().expansionRules().mRules().allowedPositions().addExpansion(new PredicateExpansion&lt;&gt;(</b>
+<b class="fc"><i>173</i>&nbsp;                        t -&gt; t.map().getLevelDifference(t.chosenPosition(), t.activeWorkerPosition()) &lt;= 0</b>
+<b class="fc"><i>174</i>&nbsp;                        , false, s.enemiesAsTarget()));</b>
+<i>175</i>&nbsp;
+<b class="fc"><i>176</i>&nbsp;            }}, GameMarker.defaultMarker()));</b>
+<b class="fc"><i>177</i>&nbsp;    }</b>
+<i>178</i>&nbsp;
+<i>179</i>&nbsp;    /**
+<i>180</i>&nbsp;     * Brief Effect applier for being able to force backwards (if possible) an enemy on the movement chosen position
+<i>181</i>&nbsp;     * @param r rules
+<i>182</i>&nbsp;     */
+<i>183</i>&nbsp;    public static void forceEnemyBackwards(MRules r) {
+<b class="fc"><i>184</i>&nbsp;        r.allowedPositions().overwriteExpansion(new PredicateExpansion&lt;&gt;(s -&gt; {</b>
+<b class="fc"><i>185</i>&nbsp;            Position finalPosition = s.chosenPosition();</b>
+<b class="fc"><i>186</i>&nbsp;            Cell finalCell = s.map().cellAt(finalPosition);</b>
+<b class="fc"><i>187</i>&nbsp;            Position backwardsPos = GameMap.getBackwardsPosition(s.activeWorkerPosition(), finalPosition);</b>
+<b class="fc"><i>188</i>&nbsp;            Boolean c1 = !finalCell.isOccupied();</b>
+<b class="fc"><i>189</i>&nbsp;            Boolean c2 = finalCell.isOccupied() &amp;&amp; !finalCell.getOccupantId().equals(s.currentPlayer().getId()) &amp;&amp;</b>
+<b class="fc"><i>190</i>&nbsp;                    backwardsPos != null &amp;&amp; s.map().cellAt(backwardsPos).isReachable();</b>
+<b class="fc"><i>191</i>&nbsp;            return c1 || c2;</b>
+<i>192</i>&nbsp;
+<b class="fc"><i>193</i>&nbsp;        }, false, GameMarker.defaultMarker()), DefaultMoveFactory.Index.NoOccupied.getIndex());</b>
+<i>194</i>&nbsp;
+<b class="fc"><i>195</i>&nbsp;        r.movement().addExpansionFirst(new ConsumerExpansion&lt;&gt;(s -&gt; {</b>
+<b class="fc"><i>196</i>&nbsp;            Position finalPosition = s.chosenPosition();</b>
+<b class="fc"><i>197</i>&nbsp;            if (s.map().cellAt(finalPosition).isOccupied()) {</b>
+<b class="fc"><i>198</i>&nbsp;                Position backwardsPos = GameMap.getBackwardsPosition(s.initialPosition(), finalPosition);</b>
+<b class="fc"><i>199</i>&nbsp;                s.map().move(finalPosition, backwardsPos);}}, GameMarker.defaultMarker()));</b>
+<b class="fc"><i>200</i>&nbsp;    }</b>
+<i>201</i>&nbsp;
+<i>202</i>&nbsp;    /**
+<i>203</i>&nbsp;     * Brief Effect applier for being able to win if going down by two or more levels too
+<i>204</i>&nbsp;     * @param r rules
+<i>205</i>&nbsp;     */
+<i>206</i>&nbsp;    public static void winIfDownTwoLevels(MRules r) {
+<b class="fc"><i>207</i>&nbsp;        r.winCondition().addExpansion(new PredicateExpansion&lt;&gt;(s -&gt;</b>
+<b class="nc"><i>208</i>&nbsp;                s.map().getLevelDifference(s.activeWorkerPosition(), s.chosenPosition()) &gt;= 2,</b>
+<b class="fc"><i>209</i>&nbsp;                true, GameMarker.defaultMarker()));</b>
+<b class="fc"><i>210</i>&nbsp;    }</b>
+<i>211</i>&nbsp;
+<i>212</i>&nbsp;    /**
+<i>213</i>&nbsp;     * Brief Effect applier for being able to not allow the enemies to win if they are on the perimeter space
+<i>214</i>&nbsp;     * @param r rules
+<i>215</i>&nbsp;     */
+<i>216</i>&nbsp;    public static void noWinIfEnemyOnPerimeter(MRules r) {
+<b class="fc"><i>217</i>&nbsp;        r.winCondition().addExpansion(new PredicateExpansion&lt;&gt;(s -&gt; {</b>
+<b class="nc"><i>218</i>&nbsp;            s.expansionRules().mRules().winCondition().addExpansion(new PredicateExpansion&lt;&gt;(t -&gt;</b>
+<b class="nc"><i>219</i>&nbsp;                    !t.map().perimeterSpace().contains(t.chosenPosition()),</b>
+<b class="fc"><i>220</i>&nbsp;                    false, s.enemiesAsTarget())); return false;}, true, GameMarker.defaultMarker()));</b>
+<b class="fc"><i>221</i>&nbsp;    }</b>
+<i>222</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,311 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: GameMap</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model</a> ]
+</div>
+
+<h1>Coverage Summary for Class: GameMap (it.polimi.ingsw.santorini.model)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">GameMap</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    66,7%
+  </span>
+  <span class="absValue">
+    (14/ 21)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    51,2%
+  </span>
+  <span class="absValue">
+    (44/ 86)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.exceptions.*;
+<i>4</i>&nbsp;import javafx.geometry.Pos;
+<i>5</i>&nbsp;
+<i>6</i>&nbsp;import java.util.ArrayList;
+<i>7</i>&nbsp;import java.util.Arrays;
+<i>8</i>&nbsp;import java.util.List;
+<i>9</i>&nbsp;
+<i>10</i>&nbsp;/**
+<i>11</i>&nbsp; * Brief Class that represents the map and includes game map logic related to insertion and removals of workers or buildings on particular tiles identified via position&#39;s coordinates
+<i>12</i>&nbsp; */
+<i>13</i>&nbsp;public class GameMap {
+<b class="fc"><i>14</i>&nbsp;    private static final Integer defaultWidth = 5;</b>
+<b class="fc"><i>15</i>&nbsp;    private static final Integer defaultHeight = 5;</b>
+<b class="fc"><i>16</i>&nbsp;    private static final Cell[][] board = new Cell[defaultHeight][defaultWidth];</b>
+<i>17</i>&nbsp;
+<b class="fc"><i>18</i>&nbsp;    public GameMap() {</b>
+<b class="fc"><i>19</i>&nbsp;        for(int i = 0; i &lt; defaultHeight; i++)</b>
+<b class="fc"><i>20</i>&nbsp;            for(int j = 0; j &lt; defaultWidth; j++)</b>
+<b class="fc"><i>21</i>&nbsp;                board[i][j] = new Cell();</b>
+<b class="fc"><i>22</i>&nbsp;    }</b>
+<i>23</i>&nbsp;
+<i>24</i>&nbsp;    public static Cell[][] getBoard() {
+<b class="fc"><i>25</i>&nbsp;        return board.clone();</b>
+<i>26</i>&nbsp;    }
+<i>27</i>&nbsp;
+<i>28</i>&nbsp;    public void setCell(Cell cell, Position position) {
+<b class="nc"><i>29</i>&nbsp;        board[position.getX()][position.getY()] = cell;</b>
+<b class="nc"><i>30</i>&nbsp;    }</b>
+<i>31</i>&nbsp;
+<i>32</i>&nbsp;    /**
+<i>33</i>&nbsp;     * Brief This functions automatically generates the next Block to be built on the given Cell and pushes it, except if a Dome has already
+<i>34</i>&nbsp;     *       been built on the Cell
+<i>35</i>&nbsp;     * @param position is the position of the Cell
+<i>36</i>&nbsp;     * @return true if the Block has been successfully built
+<i>37</i>&nbsp;     */
+<i>38</i>&nbsp;    public Boolean buildNextLevel(Position position) {
+<b class="nc"><i>39</i>&nbsp;        Cell chosenCell = cellAt(position);</b>
+<i>40</i>&nbsp;        Block blockInConstruction;
+<b class="nc"><i>41</i>&nbsp;        if(chosenCell.isBlocked()) return false;</b>
+<b class="nc"><i>42</i>&nbsp;        if(chosenCell.getLevel().equals(3)){  //a Dome is to be built</b>
+<b class="nc"><i>43</i>&nbsp;            if (chosenCell.isOccupied()) return false; //a Worker cannot build a Dome underneath itself</b>
+<b class="nc"><i>44</i>&nbsp;            blockInConstruction = new Block(BlockType.DOME);</b>
+<i>45</i>&nbsp;        }
+<b class="nc"><i>46</i>&nbsp;        else blockInConstruction = new Block(chosenCell.getLevel() + 1);</b>
+<b class="nc"><i>47</i>&nbsp;        blockInConstruction.setPosition(position);</b>
+<b class="nc"><i>48</i>&nbsp;        if(chosenCell.isOccupied()){ //the Worker on this cell is building underneath itself</b>
+<b class="nc"><i>49</i>&nbsp;            GameObject buildingWorker = chosenCell.popGameObject();</b>
+<b class="nc"><i>50</i>&nbsp;            chosenCell.pushGameObject(blockInConstruction);</b>
+<b class="nc"><i>51</i>&nbsp;            chosenCell.pushGameObject(buildingWorker);</b>
+<b class="nc"><i>52</i>&nbsp;        }</b>
+<i>53</i>&nbsp;        else
+<b class="nc"><i>54</i>&nbsp;            chosenCell.pushGameObject(blockInConstruction);</b>
+<b class="nc"><i>55</i>&nbsp;        return true;</b>
+<i>56</i>&nbsp;    }
+<i>57</i>&nbsp;
+<i>58</i>&nbsp;    /**
+<i>59</i>&nbsp;     * Brief adds a GameObject on a Cell at a certain position and deletes from allowedPositions if it is invoked during setup
+<i>60</i>&nbsp;     * @param gameObject is the object to add
+<i>61</i>&nbsp;     * @param position is the Cell&#39;s position
+<i>62</i>&nbsp;     * @return true if the object gets placed correctly, else false
+<i>63</i>&nbsp;     * @throws IncorrectBlockTypeException if the block trying to be pushed doesn&#39;t follow the correct building order
+<i>64</i>&nbsp;     */
+<i>65</i>&nbsp;    public Boolean addGameObject(GameObject gameObject, Position position) throws IncorrectBlockTypeException{
+<b class="fc"><i>66</i>&nbsp;        Cell chosenCell = cellAt(position);</b>
+<b class="fc"><i>67</i>&nbsp;        if(!chosenCell.isReachable())</b>
+<b class="nc"><i>68</i>&nbsp;            return false;</b>
+<b class="fc"><i>69</i>&nbsp;        if((gameObject.correspondingLevel() != null &amp;&amp; !gameObject.blocksCell() &amp;&amp; !gameObject.correspondingLevel().equals(chosenCell.getLevel() + 1)))</b>
+<b class="nc"><i>70</i>&nbsp;            throw new IncorrectBlockTypeException();</b>
+<b class="fc"><i>71</i>&nbsp;        cellAt(position).pushGameObject(gameObject);</b>
+<b class="fc"><i>72</i>&nbsp;        gameObject.setPosition(position);</b>
+<b class="fc"><i>73</i>&nbsp;        return true;</b>
+<i>74</i>&nbsp;    }
+<i>75</i>&nbsp;
+<i>76</i>&nbsp;    /**
+<i>77</i>&nbsp;     * Brief moves a GameObject from the Cell &#39;from&#39; to the Cell &#39;to&#39;
+<i>78</i>&nbsp;     * @param from is the position of the initial Cell
+<i>79</i>&nbsp;     * @param to is the position of the Cell the GameObject is being moved to
+<i>80</i>&nbsp;     * @return true if the GameObject can perform the movement, otherwise false
+<i>81</i>&nbsp;     * @throws OutOfBoundsException if &#39;from&#39; is an incorrect Position
+<i>82</i>&nbsp;     * @throws SamePositionException if &#39;to&#39; is equal to &#39;from&#39;
+<i>83</i>&nbsp;     */
+<i>84</i>&nbsp;    public Boolean move(Position from, Position to) throws OutOfBoundsException, SamePositionException {
+<i>85</i>&nbsp;        GameObject g;
+<b class="fc"><i>86</i>&nbsp;        if(!isWithinGrid(from) || !isWithinGrid(to)) throw new OutOfBoundsException();</b>
+<b class="fc"><i>87</i>&nbsp;        else if(from.equals(to)) throw new SamePositionException();</b>
+<b class="fc"><i>88</i>&nbsp;        if (checkMove(from, to)) {</b>
+<b class="fc"><i>89</i>&nbsp;            try{g = cellAt(from).popGameObject();}</b>
+<b class="fc"><i>90</i>&nbsp;            catch (EmptyCellException e) {return false;}</b>
+<b class="fc"><i>91</i>&nbsp;            addGameObject(g, to);</b>
+<b class="fc"><i>92</i>&nbsp;            return true;</b>
+<i>93</i>&nbsp;        }
+<b class="nc"><i>94</i>&nbsp;        return false;</b>
+<i>95</i>&nbsp;    }
+<i>96</i>&nbsp;
+<i>97</i>&nbsp;    public static Integer getDefaultWidth() {
+<b class="fc"><i>98</i>&nbsp;        return defaultWidth;</b>
+<i>99</i>&nbsp;    }
+<i>100</i>&nbsp;
+<i>101</i>&nbsp;    public static Integer getDefaultHeight() {
+<b class="fc"><i>102</i>&nbsp;        return defaultHeight;</b>
+<i>103</i>&nbsp;    }
+<i>104</i>&nbsp;
+<i>105</i>&nbsp;    /**
+<i>106</i>&nbsp;     * Brief Checks if a GameObject can move from a position at a certain level to a destination with a given level
+<i>107</i>&nbsp;     * @param initial is the position of the Cell the GameObject is moving from
+<i>108</i>&nbsp;     * @param destination is the position of the destination Cell
+<i>109</i>&nbsp;     * @return true if destination&#39;s level is lower, equal or at max one higher than initial&#39;s position and hasn&#39;t a worker or a dome on top of it
+<i>110</i>&nbsp;     */
+<i>111</i>&nbsp;    public Boolean checkMove(Position initial, Position destination) {
+<b class="fc"><i>112</i>&nbsp;        Cell destinationCell = cellAt(destination);</b>
+<b class="fc"><i>113</i>&nbsp;        return (destinationCell.getLevel() &lt;= (cellAt(initial).getLevel() + 1)) &amp;&amp; destinationCell.isReachable();</b>
+<i>114</i>&nbsp;    }
+<i>115</i>&nbsp;
+<i>116</i>&nbsp;    /**
+<i>117</i>&nbsp;     * Brief checks if the coordinates of the Cell are within the board
+<i>118</i>&nbsp;     * @param position is the position to control
+<i>119</i>&nbsp;     * @return true if the position is within the board
+<i>120</i>&nbsp;     */
+<i>121</i>&nbsp;    private static Boolean isWithinGrid(Position position){
+<b class="fc"><i>122</i>&nbsp;        return !((position.getX() &lt; 0) || (position.getY() &lt; 0) || (position.getX() &gt;= defaultWidth) || (position.getY() &gt;= defaultHeight));</b>
+<i>123</i>&nbsp;    }
+<i>124</i>&nbsp;
+<i>125</i>&nbsp;    /**
+<i>126</i>&nbsp;     * Brief returns an arrayList of the Positions on the board accessible to a Worker on the Cell in position
+<i>127</i>&nbsp;     * @param position is the initial position from which a Worker is to be moved
+<i>128</i>&nbsp;     * @return the arrayList of accessible Positions
+<i>129</i>&nbsp;     */
+<i>130</i>&nbsp;    public ArrayList&lt;Position&gt; getValidDestinations(Position position){
+<b class="nc"><i>131</i>&nbsp;        ArrayList&lt;Position&gt; reachablePositions = getReachablePositions(position);</b>
+<b class="nc"><i>132</i>&nbsp;        reachablePositions.removeIf(p -&gt; !checkMove(position, p));</b>
+<b class="nc"><i>133</i>&nbsp;        return reachablePositions;</b>
+<i>134</i>&nbsp;    }
+<i>135</i>&nbsp;
+<i>136</i>&nbsp;    /**
+<i>137</i>&nbsp;     * Brief Returns the cell at the wanted position
+<i>138</i>&nbsp;     * @param position is the chosen position
+<i>139</i>&nbsp;     * @return the corresponding Cell
+<i>140</i>&nbsp;     */
+<i>141</i>&nbsp;    public Cell cellAt(Position position){
+<b class="fc"><i>142</i>&nbsp;        return board[position.getX()][position.getY()];</b>
+<i>143</i>&nbsp;    }
+<i>144</i>&nbsp;
+<i>145</i>&nbsp;    /**
+<i>146</i>&nbsp;     * Brief Checks all the neighboring cells without a Dome on top or not occupied by a Worker
+<i>147</i>&nbsp;     * @param position is the Worker&#39;s position around which the method analyzes the unoccupied positions
+<i>148</i>&nbsp;     * @return an ArrayList of unoccupied positions
+<i>149</i>&nbsp;     */
+<i>150</i>&nbsp;    public ArrayList&lt;Position&gt; getReachablePositions(Position position){
+<b class="nc"><i>151</i>&nbsp;        Integer x = position.getX();</b>
+<b class="nc"><i>152</i>&nbsp;        Integer y = position.getY();</b>
+<b class="nc"><i>153</i>&nbsp;        ArrayList&lt;Position&gt; unoccupiedPositions = new ArrayList&lt;&gt;();</b>
+<b class="nc"><i>154</i>&nbsp;        for(int i = x - 1; i &lt;= x + 1; i++)</b>
+<b class="nc"><i>155</i>&nbsp;            for (int j = y - 1; j &lt;= y + 1; j++) {</b>
+<b class="nc"><i>156</i>&nbsp;                Position p = new Position(i, j);</b>
+<b class="nc"><i>157</i>&nbsp;                if (!p.equals(position) &amp;&amp; isWithinGrid(p) &amp;&amp; cellAt(p).isReachable())</b>
+<b class="nc"><i>158</i>&nbsp;                    unoccupiedPositions.add(p);</b>
+<i>159</i>&nbsp;            }
+<b class="nc"><i>160</i>&nbsp;        return unoccupiedPositions;</b>
+<i>161</i>&nbsp;    }
+<i>162</i>&nbsp;
+<i>163</i>&nbsp;    /**
+<i>164</i>&nbsp;     * Brief Returns all the perimetral positions
+<i>165</i>&nbsp;     * @return a list of positions
+<i>166</i>&nbsp;     */
+<i>167</i>&nbsp;    public List&lt;Position&gt; perimeterSpace() {
+<b class="nc"><i>168</i>&nbsp;        List&lt;Position&gt; positions = new ArrayList&lt;&gt;();</b>
+<b class="nc"><i>169</i>&nbsp;        for(int i = 0; i &lt; defaultHeight; i++)</b>
+<b class="nc"><i>170</i>&nbsp;            for(int j = 0; j &lt; defaultWidth; j++)</b>
+<b class="nc"><i>171</i>&nbsp;                if(i == 0 || i == defaultHeight - 1 || j == 0 || j == defaultWidth - 1)</b>
+<b class="nc"><i>172</i>&nbsp;                    positions.add(new Position(i, j));</b>
+<b class="nc"><i>173</i>&nbsp;        return positions;</b>
+<i>174</i>&nbsp;    }
+<i>175</i>&nbsp;
+<i>176</i>&nbsp;    /**
+<i>177</i>&nbsp;     * Brief setter for the floatingObject
+<i>178</i>&nbsp;     * @param floatingObject the floating object
+<i>179</i>&nbsp;     */
+<i>180</i>&nbsp;    public void floatObject(GameObject floatingObject, Position position) {
+<b class="fc"><i>181</i>&nbsp;        cellAt(position).floatObject(floatingObject);</b>
+<b class="fc"><i>182</i>&nbsp;        floatingObject.setPosition(position);</b>
+<b class="fc"><i>183</i>&nbsp;    }</b>
+<i>184</i>&nbsp;
+<i>185</i>&nbsp;    /**
+<i>186</i>&nbsp;     * Brief Checks if there&#39;s a position in the map on the same direction of the two positions passed to the function
+<i>187</i>&nbsp;     * @param origin origin position
+<i>188</i>&nbsp;     * @param destination destination position
+<i>189</i>&nbsp;     * @return the position (if exists in the map) straight backwards the destination, otherwise null
+<i>190</i>&nbsp;     */
+<i>191</i>&nbsp;    public static Position getBackwardsPosition (Position origin, Position destination) {
+<b class="fc"><i>192</i>&nbsp;        int dx = destination.getX() - origin.getX(), dy = destination.getY() - origin.getY();</b>
+<b class="fc"><i>193</i>&nbsp;        dx += dx != 0 ? (dx &gt; 0 ? 1 : -1) : 0;</b>
+<b class="fc"><i>194</i>&nbsp;        dy += dy != 0 ? (dy &gt; 0 ? 1 : -1) : 0;</b>
+<b class="fc"><i>195</i>&nbsp;        Position backwards = new Position(origin.getX() + dx, origin.getY() + dy);</b>
+<b class="fc"><i>196</i>&nbsp;        return isWithinGrid(backwards) ? backwards : null;</b>
+<i>197</i>&nbsp;    }
+<i>198</i>&nbsp;
+<i>199</i>&nbsp;    public static List&lt;Position&gt; getNeighboringPositions(Position position){
+<b class="fc"><i>200</i>&nbsp;        List&lt;Position&gt; neighbouringPositions = new ArrayList&lt;&gt;();</b>
+<b class="fc"><i>201</i>&nbsp;        Integer x = position.getX(), y = position.getY();</b>
+<b class="fc"><i>202</i>&nbsp;        for (int i = x - 1; i &lt;= x + 1; i++) {</b>
+<b class="fc"><i>203</i>&nbsp;            for (int j = y - 1; j &lt;= y + 1; j++) {</b>
+<b class="fc"><i>204</i>&nbsp;                Position p = new Position(i, j);</b>
+<b class="fc"><i>205</i>&nbsp;                if (isWithinGrid(p)) neighbouringPositions.add(p);</b>
+<i>206</i>&nbsp;            }
+<i>207</i>&nbsp;        }
+<b class="fc"><i>208</i>&nbsp;        return neighbouringPositions;</b>
+<i>209</i>&nbsp;    }
+<i>210</i>&nbsp;
+<i>211</i>&nbsp;    public Integer getLevelDifference(Position pos1, Position pos2) {
+<b class="fc"><i>212</i>&nbsp;        return cellAt(pos1).getLevel() - cellAt(pos2).getLevel();</b>
+<i>213</i>&nbsp;    }
+<i>214</i>&nbsp;
+<i>215</i>&nbsp;    @Override
+<i>216</i>&nbsp;    public boolean equals(Object o) {
+<b class="nc"><i>217</i>&nbsp;        if (this == o) return true;</b>
+<b class="nc"><i>218</i>&nbsp;        if (o == null || getClass() != o.getClass()) return false;</b>
+<b class="nc"><i>219</i>&nbsp;        return Arrays.equals(board, GameMap.board);</b>
+<i>220</i>&nbsp;    }
+<i>221</i>&nbsp;
+<i>222</i>&nbsp;    @Override
+<i>223</i>&nbsp;    public String toString() {
+<b class="nc"><i>224</i>&nbsp;        return &quot;GameMap{&quot; +</b>
+<b class="nc"><i>225</i>&nbsp;                &quot;matrix=&quot; + Arrays.toString(board) +</b>
+<i>226</i>&nbsp;                &#39;}&#39;;
+<i>227</i>&nbsp;    }
+<i>228</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

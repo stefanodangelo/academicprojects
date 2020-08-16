@@ -1,0 +1,400 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: SantoriniGame</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model</a> ]
+</div>
+
+<h1>Coverage Summary for Class: SantoriniGame (it.polimi.ingsw.santorini.model)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SantoriniGame</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    65,4%
+  </span>
+  <span class="absValue">
+    (17/ 26)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    62,1%
+  </span>
+  <span class="absValue">
+    (77/ 124)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.controller.CardLoader;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameOperation;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameOperationsExecutor;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.factory.BuildFactory;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.factory.MoveFactory;
+<i>8</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.GameState;
+<i>9</i>&nbsp;import it.polimi.ingsw.santorini.model.utils.TurnMessage;
+<i>10</i>&nbsp;
+<i>11</i>&nbsp;import java.util.*;
+<i>12</i>&nbsp;import java.util.function.Consumer;
+<i>13</i>&nbsp;
+<i>14</i>&nbsp;/**
+<i>15</i>&nbsp; * Brief Main Singleton class of the whole game, storing the informations about the map, the players and other parameters and communicating with the controller through an interface
+<i>16</i>&nbsp; */
+<i>17</i>&nbsp;public class SantoriniGame implements TurnBasedGame {
+<b class="fc"><i>18</i>&nbsp;    private static final Integer TWOPLAYERSMODE = 2;</b>
+<b class="fc"><i>19</i>&nbsp;    private static final Integer STANDARDNUMOFWORKERS = 2;</b>
+<i>20</i>&nbsp;    private static GameMap map;
+<i>21</i>&nbsp;    private final GameDelegate delegate;
+<b class="fc"><i>22</i>&nbsp;    private final PlayersHandler playersHandler = new PlayersHandler();</b>
+<i>23</i>&nbsp;    private final Integer numberOfPlayers;
+<i>24</i>&nbsp;    private static GameMode mode;
+<b class="fc"><i>25</i>&nbsp;    private final GameOperationsExecutor executor = new GameOperationsExecutor();</b>
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    /**
+<i>28</i>&nbsp;     * Brief Creates a new instance of SantoriniGame
+<i>29</i>&nbsp;     * @param delegate is the GameDelegate who communicates with the controller
+<i>30</i>&nbsp;     * @param numberOfPlayers is the number of players in game
+<i>31</i>&nbsp;     */
+<b class="fc"><i>32</i>&nbsp;    public SantoriniGame(GameDelegate delegate, Integer numberOfPlayers) {</b>
+<b class="fc"><i>33</i>&nbsp;        this.delegate = delegate;</b>
+<b class="fc"><i>34</i>&nbsp;        this.numberOfPlayers = numberOfPlayers;</b>
+<b class="fc"><i>35</i>&nbsp;    }</b>
+<i>36</i>&nbsp;
+<i>37</i>&nbsp;    /**
+<i>38</i>&nbsp;     * Brief This method is divided in steps, also based on the rulebook&#39;s Setup section:
+<i>39</i>&nbsp;     *       1) Map creation (rulebook&#39;s steps 1 and 2)
+<i>40</i>&nbsp;     *       2) Players log in
+<i>41</i>&nbsp;     *       3) Game mode request: if BASIC, loads the basic rules and randomly chooses the first player then goes to step 4)
+<i>42</i>&nbsp;     *          3.1) Poll for the most god-like player election (rulebook&#39;s step 3)
+<i>43</i>&nbsp;     *          3.2) God powers selection and &quot;reading&quot; (rulebook&#39;s steps 3, 4 and 5)
+<i>44</i>&nbsp;     *          3.3) Cards assignment in clockwise order (rulebook&#39;s step 6)
+<i>45</i>&nbsp;     *          3.4) First player choice (rulebook&#39;s step 7)
+<i>46</i>&nbsp;     *       4) Workers selection and positioning (rulebook&#39;s step 7)
+<i>47</i>&nbsp;     */
+<i>48</i>&nbsp;    @Override
+<i>49</i>&nbsp;    public void setupGame() {
+<i>50</i>&nbsp;        Player godLikePlayer;
+<i>51</i>&nbsp;
+<i>52</i>&nbsp;        //Players acceptance via server
+<b class="fc"><i>53</i>&nbsp;        logIn();</b>
+<i>54</i>&nbsp;
+<i>55</i>&nbsp;        //Game mod choice
+<b class="fc"><i>56</i>&nbsp;        mode = delegate.requestGameMode(PlayersHandler.getPlayers().get(0).getId());</b>
+<i>57</i>&nbsp;
+<b class="fc"><i>58</i>&nbsp;        if(mode.equals(GameMode.BASIC)) {</b>
+<b class="nc"><i>59</i>&nbsp;            loadBasicRules(PlayersHandler.getPlayers());</b>
+<b class="nc"><i>60</i>&nbsp;            playersHandler.setCurrentPlayerIndex((int) (Math.random() * 10) % numberOfPlayers);</b>
+<i>61</i>&nbsp;        }
+<i>62</i>&nbsp;        else {
+<i>63</i>&nbsp;            //Most god-like Player choice via Poll
+<b class="fc"><i>64</i>&nbsp;            Poll poll = new Poll(numberOfPlayers, &quot;Choose the most \&quot;god-like\&quot; player&quot;);</b>
+<b class="fc"><i>65</i>&nbsp;            godLikePlayer = godLikePlayerChoice(PlayersHandler.getPlayers(), poll);</b>
+<i>66</i>&nbsp;
+<i>67</i>&nbsp;            //Cards loading and selection
+<b class="fc"><i>68</i>&nbsp;            cardsSelection(godLikePlayer);</b>
+<i>69</i>&nbsp;
+<i>70</i>&nbsp;            //Cards&#39; assignment
+<b class="fc"><i>71</i>&nbsp;            assignCards(CardLoader.getCards(), godLikePlayer);</b>
+<i>72</i>&nbsp;
+<i>73</i>&nbsp;            //First Player choice
+<b class="fc"><i>74</i>&nbsp;            delegate.requestFirstPlayerChoice(godLikePlayer.getId(), PlayersHandler.getPlayers(), id -&gt; playersHandler.setCurrentPlayerIndex(PlayersHandler.getPlayers().indexOf(PlayersHandler.getPlayerById(id))));</b>
+<i>75</i>&nbsp;        }
+<i>76</i>&nbsp;
+<i>77</i>&nbsp;        //Workers choices and positioning
+<b class="fc"><i>78</i>&nbsp;        selectWorker(getUnassignedPositions());</b>
+<b class="fc"><i>79</i>&nbsp;    }</b>
+<i>80</i>&nbsp;
+<i>81</i>&nbsp;    Player currentPlayer;
+<i>82</i>&nbsp;
+<i>83</i>&nbsp;    /**
+<i>84</i>&nbsp;     * Brief Calls the current player&#39;s turn handler, then chooses the next player and ends the game if there&#39;s a winner
+<i>85</i>&nbsp;     */
+<i>86</i>&nbsp;    @Override
+<i>87</i>&nbsp;    public void startGame() {
+<b class="nc"><i>88</i>&nbsp;        currentPlayer = PlayersHandler.getCurrentPlayer();</b>
+<b class="nc"><i>89</i>&nbsp;        gameCycle();</b>
+<b class="nc"><i>90</i>&nbsp;    }</b>
+<i>91</i>&nbsp;
+<i>92</i>&nbsp;    private void gameCycle() {
+<b class="nc"><i>93</i>&nbsp;        currentPlayer = PlayersHandler.getCurrentPlayer();</b>
+<b class="nc"><i>94</i>&nbsp;        handleTurn(currentPlayer, thereIsAWinner -&gt; {</b>
+<b class="nc"><i>95</i>&nbsp;            currentPlayer = playersHandler.next();</b>
+<b class="nc"><i>96</i>&nbsp;            if (!thereIsAWinner) gameCycle();</b>
+<i>97</i>&nbsp;            else {
+<i>98</i>&nbsp;                try {
+<b class="nc"><i>99</i>&nbsp;                    TurnBasedGame.endGame();</b>
+<b class="nc"><i>100</i>&nbsp;                } catch (RuntimeException ignored){}</b>
+<i>101</i>&nbsp;            }
+<b class="nc"><i>102</i>&nbsp;        });</b>
+<b class="nc"><i>103</i>&nbsp;    }</b>
+<i>104</i>&nbsp;
+<i>105</i>&nbsp;    /**
+<i>106</i>&nbsp;     * Brief Handles the current turn
+<i>107</i>&nbsp;     * @param player is the player who plays the current turn
+<i>108</i>&nbsp;     * @param onCompletion true if there&#39;s a winner, otherwise false
+<i>109</i>&nbsp;     */
+<i>110</i>&nbsp;    @Override
+<i>111</i>&nbsp;    public void handleTurn(Player player, Consumer&lt;Boolean&gt; onCompletion) {
+<b class="fc"><i>112</i>&nbsp;        executor.executeOperations(player.getCard().getPower(), player, new GameState(map, PlayersHandler.getPlayers(), delegate), (win) -&gt; {</b>
+<b class="fc"><i>113</i>&nbsp;            if(win != null) checkWin(player, win, onCompletion);</b>
+<b class="fc"><i>114</i>&nbsp;            else if (onCompletion != null) onCompletion.accept(false);</b>
+<b class="fc"><i>115</i>&nbsp;        });</b>
+<b class="fc"><i>116</i>&nbsp;    }</b>
+<i>117</i>&nbsp;
+<i>118</i>&nbsp;    /**
+<i>119</i>&nbsp;     * Brief checks the victory condition for the current turn
+<i>120</i>&nbsp;     * @param player is the player who plays the current turn
+<i>121</i>&nbsp;     * @param win is true in case of win, false in case of loss
+<i>122</i>&nbsp;     * @param onCompletion true if there&#39;s a winner, otherwise false
+<i>123</i>&nbsp;     */
+<i>124</i>&nbsp;    private void checkWin(Player player, Boolean win, Consumer&lt;Boolean&gt; onCompletion) {
+<b class="nc"><i>125</i>&nbsp;        if(!win) {</b>
+<b class="nc"><i>126</i>&nbsp;            if(PlayersHandler.getPlayers().size() == TWOPLAYERSMODE){</b>
+<b class="nc"><i>127</i>&nbsp;                Player winner = playersHandler.next();</b>
+<b class="nc"><i>128</i>&nbsp;                String notificationMessage = winner.getName() + TurnMessage.winMotivationMessage + player.getName() + TurnMessage.loseMotivationMessage;</b>
+<b class="nc"><i>129</i>&nbsp;                informPlayers(player, notificationMessage, TurnMessage.loseMessage, false);</b>
+<b class="nc"><i>130</i>&nbsp;                informPlayers(winner, winner.getName() + TurnMessage.winNotificationMessage, TurnMessage.winMessage, true);</b>
+<b class="nc"><i>131</i>&nbsp;                onCompletion.accept(true);</b>
+<b class="nc"><i>132</i>&nbsp;            }</b>
+<i>133</i>&nbsp;            else {
+<b class="nc"><i>134</i>&nbsp;                removeWorkers(player);</b>
+<b class="nc"><i>135</i>&nbsp;                delegate.onBoardChanged(GameMap.getBoard(), null);</b>
+<b class="nc"><i>136</i>&nbsp;                informPlayers(player, player.getName() + TurnMessage.loseMotivationMessage + &quot;, so he&quot; + TurnMessage.loseNotificationMessage, TurnMessage.loseMessage, false);</b>
+<i>137</i>&nbsp;            }
+<i>138</i>&nbsp;        }
+<i>139</i>&nbsp;        else
+<b class="nc"><i>140</i>&nbsp;            informPlayers(player, player.getName() + TurnMessage.winNotificationMessage, TurnMessage.winMessage, true);</b>
+<b class="nc"><i>141</i>&nbsp;        if (onCompletion != null) onCompletion.accept(win);</b>
+<b class="nc"><i>142</i>&nbsp;    }</b>
+<i>143</i>&nbsp;
+<i>144</i>&nbsp;    /**
+<i>145</i>&nbsp;     * Brief Accepts a player asking him to insert a username
+<i>146</i>&nbsp;     */
+<i>147</i>&nbsp;    private void logIn(){
+<b class="fc"><i>148</i>&nbsp;        delegate.requestPlayersNames(names -&gt; {</b>
+<b class="fc"><i>149</i>&nbsp;            for(String name : names)</b>
+<b class="fc"><i>150</i>&nbsp;                playersHandler.addPlayer(new Player(names.indexOf(name) + 1, name));</b>
+<b class="fc"><i>151</i>&nbsp;        });</b>
+<b class="fc"><i>152</i>&nbsp;    }</b>
+<i>153</i>&nbsp;
+<i>154</i>&nbsp;    /**
+<i>155</i>&nbsp;     * Brief Loads basic rules to each player, giving them a special card with id equals to 0
+<i>156</i>&nbsp;     * @param players are the players in game
+<i>157</i>&nbsp;     */
+<i>158</i>&nbsp;    private void loadBasicRules(ArrayList&lt;Player&gt; players){
+<b class="nc"><i>159</i>&nbsp;        List&lt;GameOperation&lt;?, ?&gt;&gt; operations = Arrays.asList(MoveFactory.getDefaultMove(), BuildFactory.getDefaultBuild());</b>
+<b class="nc"><i>160</i>&nbsp;        Card card = new Card(0);</b>
+<b class="nc"><i>161</i>&nbsp;        card.setPower(operations);</b>
+<b class="nc"><i>162</i>&nbsp;        for(Player player : players)</b>
+<b class="nc"><i>163</i>&nbsp;            player.setCard(card);</b>
+<b class="nc"><i>164</i>&nbsp;    }</b>
+<i>165</i>&nbsp;
+<i>166</i>&nbsp;    /**
+<i>167</i>&nbsp;     * Brief Sends a Poll to all the players to let them choose the most &quot;god-like&quot; player
+<i>168</i>&nbsp;     * @param players contains a reference to every player
+<i>169</i>&nbsp;     * @param poll is an instance containing a question and a voting method
+<i>170</i>&nbsp;     * @return the most god-like player
+<i>171</i>&nbsp;     */
+<i>172</i>&nbsp;    private Player godLikePlayerChoice(ArrayList&lt;Player&gt; players, Poll poll){
+<b class="fc"><i>173</i>&nbsp;        List&lt;Integer&gt; ids = new ArrayList&lt;&gt;();</b>
+<b class="fc"><i>174</i>&nbsp;        for(int i = 0; i &lt; numberOfPlayers; i++)</b>
+<b class="fc"><i>175</i>&nbsp;            ids.add(players.get(i).getId());</b>
+<b class="fc"><i>176</i>&nbsp;        delegate.sendPoll(ids, poll, votedIds -&gt; {</b>
+<b class="fc"><i>177</i>&nbsp;            for(Integer votedId : votedIds)</b>
+<b class="fc"><i>178</i>&nbsp;                poll.vote(votedId, players);</b>
+<b class="fc"><i>179</i>&nbsp;        });</b>
+<b class="fc"><i>180</i>&nbsp;        playersHandler.setCurrentPlayerIndex(players.indexOf(poll.getLeader(players)));</b>
+<i>181</i>&nbsp;
+<b class="fc"><i>182</i>&nbsp;        return PlayersHandler.getCurrentPlayer();</b>
+<i>183</i>&nbsp;    }
+<i>184</i>&nbsp;
+<i>185</i>&nbsp;    /**
+<i>186</i>&nbsp;     * Brief Asks the god-like player to select a number of cards equal to the number of players in game
+<i>187</i>&nbsp;     * @param godLikePlayer is the player who must choose the cards
+<i>188</i>&nbsp;     */
+<i>189</i>&nbsp;    private void cardsSelection(Player godLikePlayer){
+<b class="fc"><i>190</i>&nbsp;        ArrayList&lt;Card&gt; cards = CardLoader.getCards();</b>
+<b class="fc"><i>191</i>&nbsp;        if(mode.equals(GameMode.COMPLETE))</b>
+<b class="fc"><i>192</i>&nbsp;            cards.removeIf(Card::isAvanced);</b>
+<b class="fc"><i>193</i>&nbsp;        delegate.requestCardsSelection(godLikePlayer.getId(), cards, numberOfPlayers, CardLoader::selectCards);</b>
+<b class="fc"><i>194</i>&nbsp;    }</b>
+<i>195</i>&nbsp;
+<i>196</i>&nbsp;    /**
+<i>197</i>&nbsp;     * Brief Assigns one of the selected cards in clockwise order to each player
+<i>198</i>&nbsp;     * @param cardsToAssign are the cards to assign
+<i>199</i>&nbsp;     * @param godLikePlayer is the last player who receives the card
+<i>200</i>&nbsp;     */
+<i>201</i>&nbsp;    private void assignCards(ArrayList&lt;Card&gt; cardsToAssign, Player godLikePlayer){
+<b class="fc"><i>202</i>&nbsp;        Integer NUMOFSELECTIONS = 1;</b>
+<b class="fc"><i>203</i>&nbsp;        List&lt;Card&gt; assignedCards = new ArrayList&lt;&gt;();</b>
+<i>204</i>&nbsp;
+<b class="fc"><i>205</i>&nbsp;        for(int i = 0; i &lt; numberOfPlayers - 1; i++){</b>
+<b class="fc"><i>206</i>&nbsp;            Player p = playersHandler.next();</b>
+<i>207</i>&nbsp;
+<b class="fc"><i>208</i>&nbsp;            delegate.requestCardsSelection(p.getId(), cardsToAssign, NUMOFSELECTIONS, selectedCard -&gt; p.setCard(CardLoader.getCardById(selectedCard.get(0))));</b>
+<b class="fc"><i>209</i>&nbsp;            cardsToAssign.remove(p.getCard());</b>
+<i>210</i>&nbsp;        }
+<b class="fc"><i>211</i>&nbsp;        godLikePlayer.setCard(cardsToAssign.get(0));</b>
+<b class="fc"><i>212</i>&nbsp;        for(Player p : PlayersHandler.getPlayers())</b>
+<b class="fc"><i>213</i>&nbsp;            assignedCards.add(p.getCard());</b>
+<b class="fc"><i>214</i>&nbsp;        delegate.onCardsSelected(assignedCards);</b>
+<b class="fc"><i>215</i>&nbsp;    }</b>
+<i>216</i>&nbsp;
+<i>217</i>&nbsp;    /**
+<i>218</i>&nbsp;     * Brief This method is called at the very beginning of the game, when players have to place their workers on the map
+<i>219</i>&nbsp;     * @return all the positions in the map, because initially they&#39;re all free
+<i>220</i>&nbsp;     */
+<i>221</i>&nbsp;    private ArrayList&lt;Position&gt; getUnassignedPositions(){
+<b class="fc"><i>222</i>&nbsp;        ArrayList&lt;Position&gt; unassignedPositions = new ArrayList&lt;&gt;();</b>
+<b class="fc"><i>223</i>&nbsp;        for(int i = 0; i &lt; GameMap.getDefaultWidth(); i++)</b>
+<b class="fc"><i>224</i>&nbsp;            for(int j = 0; j &lt; GameMap.getDefaultHeight(); j++)</b>
+<b class="fc"><i>225</i>&nbsp;                unassignedPositions.add(new Position(i, j));</b>
+<b class="fc"><i>226</i>&nbsp;        return unassignedPositions;</b>
+<i>227</i>&nbsp;    }
+<i>228</i>&nbsp;
+<i>229</i>&nbsp;    /**
+<i>230</i>&nbsp;     * Brief Requests to choose a color to the player and then to place his two workers on the board
+<i>231</i>&nbsp;     * @param freePositions are the available positions on the board
+<i>232</i>&nbsp;     */
+<i>233</i>&nbsp;    private void selectWorker(ArrayList&lt;Position&gt; freePositions){
+<b class="fc"><i>234</i>&nbsp;        for(int i = 0; i &lt; numberOfPlayers; i++){</b>
+<b class="fc"><i>235</i>&nbsp;            Integer currentPlayerId = PlayersHandler.getCurrentPlayer().getId();</b>
+<b class="fc"><i>236</i>&nbsp;            delegate.requestPlayerColor(currentPlayerId, color -&gt; assignWorkers(currentPlayerId, color, freePositions));</b>
+<b class="fc"><i>237</i>&nbsp;            playersHandler.next();</b>
+<i>238</i>&nbsp;        }
+<b class="fc"><i>239</i>&nbsp;    }</b>
+<i>240</i>&nbsp;
+<i>241</i>&nbsp;    /**
+<i>242</i>&nbsp;     * Brief Assigns the workers to a player
+<i>243</i>&nbsp;     * @param playerId is the id of the player who chose to control these workers
+<i>244</i>&nbsp;     * @param color is the color of the chosen workers
+<i>245</i>&nbsp;     * @param freePositions contains all positions not yet occupied by a worker
+<i>246</i>&nbsp;     */
+<i>247</i>&nbsp;    private void assignWorkers(Integer playerId, String color, ArrayList&lt;Position&gt; freePositions) {
+<b class="fc"><i>248</i>&nbsp;        placeWorkers(new ArrayList&lt;&gt;(), color, playerId, freePositions);</b>
+<b class="fc"><i>249</i>&nbsp;        delegate.onBoardChanged(GameMap.getBoard(), freePositions);</b>
+<b class="fc"><i>250</i>&nbsp;    }</b>
+<i>251</i>&nbsp;
+<i>252</i>&nbsp;    /**
+<i>253</i>&nbsp;     * Brief Places one by one all the workers on the board and deletes their position from the allowed ones
+<i>254</i>&nbsp;     * @param workers are the workers to be placed, then assigned
+<i>255</i>&nbsp;     * @param color is the available chosen color
+<i>256</i>&nbsp;     * @param playerId is the id of the player who needs the assignment
+<i>257</i>&nbsp;     * @param freePositions contains all the positions not yet occupied by a worker
+<i>258</i>&nbsp;     */
+<i>259</i>&nbsp;    private void placeWorkers(ArrayList&lt;Worker&gt; workers, String color, Integer playerId, ArrayList&lt;Position&gt; freePositions){
+<b class="fc"><i>260</i>&nbsp;        for(int i = 0; i &lt; STANDARDNUMOFWORKERS; i++)</b>
+<b class="fc"><i>261</i>&nbsp;            workers.add(i, new Worker(color, Gender.values()[i]));</b>
+<b class="fc"><i>262</i>&nbsp;        PlayersHandler.getPlayerById(playerId).setWorkers(workers);</b>
+<b class="fc"><i>263</i>&nbsp;        for(Worker w : workers) {</b>
+<b class="fc"><i>264</i>&nbsp;            delegate.onBoardChanged(GameMap.getBoard(), freePositions);</b>
+<b class="fc"><i>265</i>&nbsp;            delegate.positionSelection(playerId, freePositions, TurnMessage.workerPlacementMessage, null, position -&gt; { map.addGameObject(w, position); freePositions.remove(position); w.setPlayerId(playerId);});</b>
+<b class="fc"><i>266</i>&nbsp;        }</b>
+<b class="fc"><i>267</i>&nbsp;    }</b>
+<i>268</i>&nbsp;
+<i>269</i>&nbsp;    public PlayersHandler getPlayersHandler() {
+<b class="fc"><i>270</i>&nbsp;        return playersHandler;</b>
+<i>271</i>&nbsp;    }
+<i>272</i>&nbsp;
+<i>273</i>&nbsp;    public static GameMode getMode() {
+<b class="nc"><i>274</i>&nbsp;        return mode;</b>
+<i>275</i>&nbsp;    }
+<i>276</i>&nbsp;
+<i>277</i>&nbsp;    /**
+<i>278</i>&nbsp;     * Brief Creates a new GameMap
+<i>279</i>&nbsp;     */
+<i>280</i>&nbsp;    public static void createMap(){
+<b class="fc"><i>281</i>&nbsp;        map = new GameMap();</b>
+<b class="fc"><i>282</i>&nbsp;    }</b>
+<i>283</i>&nbsp;
+<i>284</i>&nbsp;    /**
+<i>285</i>&nbsp;     * Brief Informs the players if there is a winner or a loser, removing him from the list of players currently in game
+<i>286</i>&nbsp;     * @param player is the winner or the loser
+<i>287</i>&nbsp;     * @param notificationMessage is the message to send to all the players except the winner/loser
+<i>288</i>&nbsp;     * @param victoryMessage is the message to send to the winner/loser
+<i>289</i>&nbsp;     * @param gameOver is true if the game will end after this notification process
+<i>290</i>&nbsp;     */
+<i>291</i>&nbsp;    private void informPlayers(Player player, String notificationMessage, String victoryMessage, boolean gameOver) {
+<b class="nc"><i>292</i>&nbsp;        for(Player p : PlayersHandler.getPlayers())</b>
+<b class="nc"><i>293</i>&nbsp;            if(!p.equals(player))</b>
+<b class="nc"><i>294</i>&nbsp;                delegate.onVictoryCondition(p.getId(), notificationMessage, null);</b>
+<b class="nc"><i>295</i>&nbsp;        delegate.onVictoryCondition(player.getId(), victoryMessage, gameOver);</b>
+<b class="nc"><i>296</i>&nbsp;        PlayersHandler.removePlayer(player);</b>
+<b class="nc"><i>297</i>&nbsp;    }</b>
+<i>298</i>&nbsp;
+<i>299</i>&nbsp;    /**
+<i>300</i>&nbsp;     * Brief Removes from the map the workers of a certain player
+<i>301</i>&nbsp;     * @param player is the player who generally lost a game
+<i>302</i>&nbsp;     */
+<i>303</i>&nbsp;    private void removeWorkers(Player player) {
+<b class="nc"><i>304</i>&nbsp;        List&lt;Worker&gt; workers = player.getWorkers();</b>
+<b class="nc"><i>305</i>&nbsp;        for(Worker worker : workers)</b>
+<b class="nc"><i>306</i>&nbsp;            map.cellAt(worker.getPosition()).popGameObject();</b>
+<b class="nc"><i>307</i>&nbsp;    }</b>
+<i>308</i>&nbsp;
+<i>309</i>&nbsp;    @Override
+<i>310</i>&nbsp;    public String toString() {
+<b class="nc"><i>311</i>&nbsp;        return &quot;SantoriniGame{&quot; +</b>
+<b class="nc"><i>312</i>&nbsp;                &quot;map=&#39;&quot; + map.toString() +</b>
+<b class="nc"><i>313</i>&nbsp;                &quot;, playersHandler=&quot; + playersHandler.toString() +</b>
+<i>314</i>&nbsp;                &quot;, numberOfPlayers=&quot; + numberOfPlayers +
+<i>315</i>&nbsp;                &#39;}&#39;;
+<i>316</i>&nbsp;    }
+<i>317</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

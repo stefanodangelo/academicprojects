@@ -1,0 +1,78 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ApplicableMRules</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules.applicable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ApplicableMRules (it.polimi.ingsw.santorini.model.gameoperations.rules.applicable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ApplicableMRules</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules.applicable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.Position;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.MRules;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.MState;
+<i>7</i>&nbsp;
+<i>8</i>&nbsp;import java.util.List;
+<i>9</i>&nbsp;
+<i>10</i>&nbsp;/**
+<i>11</i>&nbsp; * Brief Dedicated ApplicableRules for the Move operation
+<i>12</i>&nbsp; * @see it.polimi.ingsw.santorini.model.gameoperations.Move
+<i>13</i>&nbsp; */
+<i>14</i>&nbsp;public interface ApplicableMRules extends ApplicableRules&lt;MState, MRules&gt; {
+<i>15</i>&nbsp;    /**
+<i>16</i>&nbsp;     * Brief The application method for the allowedPositions Move rule
+<i>17</i>&nbsp;     * @return List&lt;Position&gt; list of allowed positions for the active worker movement
+<i>18</i>&nbsp;     */
+<i>19</i>&nbsp;    List&lt;Position&gt; applyAllowedPositions();
+<i>20</i>&nbsp;
+<i>21</i>&nbsp;    /**
+<i>22</i>&nbsp;     * Brief The application method for the winCondition Move rule
+<i>23</i>&nbsp;     * @return Boolean true if the current player won through the movement, false otherwise
+<i>24</i>&nbsp;     */
+<i>25</i>&nbsp;    Boolean applyWinCondition();
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    /**
+<i>28</i>&nbsp;     * Brief The application method for the movement Move rule. It actually produces movement effects on the game state
+<i>29</i>&nbsp;     */
+<i>30</i>&nbsp;    void applyMovement();
+<i>31</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

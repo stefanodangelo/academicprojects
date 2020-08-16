@@ -1,0 +1,162 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ListFunctionExpansion</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.expansion</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ListFunctionExpansion (it.polimi.ingsw.santorini.model.gameoperations.expansion)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ListFunctionExpansion</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    33,3%
+  </span>
+  <span class="absValue">
+    (2/ 6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    33,3%
+  </span>
+  <span class="absValue">
+    (4/ 12)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.expansion;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import java.util.Arrays;
+<i>4</i>&nbsp;import java.util.List;
+<i>5</i>&nbsp;
+<i>6</i>&nbsp;/**
+<i>7</i>&nbsp; * Brief Specific supported Expansion for ExpListFunction
+<i>8</i>&nbsp; * @param &lt;T&gt; The type of the ListFunction input
+<i>9</i>&nbsp; * @param &lt;E&gt; The type of the ListFunction result&#39;s list element
+<i>10</i>&nbsp; * @param &lt;S&gt; The type of the markers that can be coupled with the expansion
+<i>11</i>&nbsp; * @see Expansion
+<i>12</i>&nbsp; * @see ExpListFunction
+<i>13</i>&nbsp; */
+<i>14</i>&nbsp;public class ListFunctionExpansion&lt;T, E, S&gt; extends FunctionExpansion&lt;T, List&lt;E&gt;, S&gt; {
+<i>15</i>&nbsp;
+<i>16</i>&nbsp;    /**
+<i>17</i>&nbsp;     * Brief Constructor that sets the expansion ListFunction, the expansion type and the list of markers coupled with the
+<i>18</i>&nbsp;     * expansion
+<i>19</i>&nbsp;     * @param function The ListFunction involved
+<i>20</i>&nbsp;     * @param type The expansion type involved
+<i>21</i>&nbsp;     * @param markers The markers involved
+<i>22</i>&nbsp;     */
+<i>23</i>&nbsp;    public ListFunctionExpansion(ListFunction&lt;T, E&gt; function, ExpansionType type, List&lt;S&gt; markers) {
+<b class="nc"><i>24</i>&nbsp;        super(function, type, markers);</b>
+<b class="nc"><i>25</i>&nbsp;    }</b>
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    /**
+<i>28</i>&nbsp;     * Brief Constructor that sets the expansion ListFunction, the expansion type and the list of markers coupled with the
+<i>29</i>&nbsp;     * expansion
+<i>30</i>&nbsp;     * @param function The ListFunction involved
+<i>31</i>&nbsp;     * @param type The expansion type involved
+<i>32</i>&nbsp;     * @param markers The markers involved as varargs
+<i>33</i>&nbsp;     */
+<i>34</i>&nbsp;    @SafeVarargs
+<i>35</i>&nbsp;    public ListFunctionExpansion(ListFunction&lt;T, E&gt; function, ExpansionType type, S... markers) {
+<b class="nc"><i>36</i>&nbsp;        this(function, type, Arrays.asList(markers));</b>
+<b class="nc"><i>37</i>&nbsp;    }</b>
+<i>38</i>&nbsp;
+<i>39</i>&nbsp;    /**
+<i>40</i>&nbsp;     * Brief Constructor that sets the expansion&#39;s ListFunction and the expansion type
+<i>41</i>&nbsp;     * @param function The ListFunction involved
+<i>42</i>&nbsp;     * @param type The expansion type involved
+<i>43</i>&nbsp;     */
+<i>44</i>&nbsp;    public ListFunctionExpansion(ListFunction&lt;T, E&gt; function, ExpansionType type) {
+<b class="nc"><i>45</i>&nbsp;        super(function, type);</b>
+<b class="nc"><i>46</i>&nbsp;    }</b>
+<i>47</i>&nbsp;
+<i>48</i>&nbsp;    /**
+<i>49</i>&nbsp;     * Brief Constructor that sets the expansion&#39;s ListFunction, the expansion type as Boolean
+<i>50</i>&nbsp;     * and the expansion&#39;s coupled markers list
+<i>51</i>&nbsp;     * @param function The ListFunction involved
+<i>52</i>&nbsp;     * @param expansive The expansion type as a Boolean, it must be true to request expansive, false for restrictive
+<i>53</i>&nbsp;     * @param markers The markers list involved
+<i>54</i>&nbsp;     */
+<i>55</i>&nbsp;    public ListFunctionExpansion(ListFunction&lt;T, E&gt; function, Boolean expansive, List&lt;S&gt; markers) {
+<b class="fc"><i>56</i>&nbsp;        super(function, expansive, markers);</b>
+<b class="fc"><i>57</i>&nbsp;    }</b>
+<i>58</i>&nbsp;
+<i>59</i>&nbsp;    /**
+<i>60</i>&nbsp;     * Brief Constructor that sets the expansion&#39;s ListFunction, the expansion type as Boolean
+<i>61</i>&nbsp;     * and the expansion&#39;s coupled markers list as varargs
+<i>62</i>&nbsp;     * @param function The ListFunction involved
+<i>63</i>&nbsp;     * @param expansive The expansion type as a Boolean, it must be true to request expansive, false for restrictive
+<i>64</i>&nbsp;     * @param markers The markers list involved as varargs
+<i>65</i>&nbsp;     */
+<i>66</i>&nbsp;    @SafeVarargs
+<i>67</i>&nbsp;    public ListFunctionExpansion(ListFunction&lt;T, E&gt; function, Boolean expansive, S... markers) {
+<b class="fc"><i>68</i>&nbsp;        this(function, expansive, Arrays.asList(markers));</b>
+<b class="fc"><i>69</i>&nbsp;    }</b>
+<i>70</i>&nbsp;
+<i>71</i>&nbsp;    /**
+<i>72</i>&nbsp;     * Brief Constructor that sets the expansion&#39;s ListFunction and the expansion type as Boolean
+<i>73</i>&nbsp;     * @param function The ListFunction involved
+<i>74</i>&nbsp;     * @param expansive The expansion type involved as Boolean, it must be true to request expansive, false for restrictive
+<i>75</i>&nbsp;     */
+<i>76</i>&nbsp;    public ListFunctionExpansion(ListFunction&lt;T, E&gt; function, Boolean expansive) {
+<b class="nc"><i>77</i>&nbsp;        super(function, expansive);</b>
+<b class="nc"><i>78</i>&nbsp;    }</b>
+<i>79</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

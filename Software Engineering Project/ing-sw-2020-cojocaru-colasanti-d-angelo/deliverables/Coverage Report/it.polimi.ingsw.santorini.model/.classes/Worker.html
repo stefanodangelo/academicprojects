@@ -1,0 +1,172 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: Worker</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model</a> ]
+</div>
+
+<h1>Coverage Summary for Class: Worker (it.polimi.ingsw.santorini.model)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Worker</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    45,5%
+  </span>
+  <span class="absValue">
+    (5/ 11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    47,4%
+  </span>
+  <span class="absValue">
+    (9/ 19)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;/**
+<i>4</i>&nbsp; * Brief This class represents a Cellable worker in game
+<i>5</i>&nbsp; *       A worker may move in a certain position, so it&#39;s popped from the previous Stack and is pushed on the new Stack
+<i>6</i>&nbsp; *       The only one variable of this class is the player who owns the worker, so it&#39;s easy to trace back the player when we are checking conditions, for example, on a stack
+<i>7</i>&nbsp; *       A worker is Cellable on a block of any level but NOT on a DOME nor on another worker
+<i>8</i>&nbsp; *       What a worker can do is to move to a free cell around him/her and to build a block
+<i>9</i>&nbsp; */
+<i>10</i>&nbsp;public class Worker extends GameObject {
+<i>11</i>&nbsp;    private final String color;
+<i>12</i>&nbsp;    private final Gender gender;
+<i>13</i>&nbsp;    private Integer playerId;
+<i>14</i>&nbsp;
+<i>15</i>&nbsp;    public Worker(String color, Gender gender){
+<b class="fc"><i>16</i>&nbsp;        super();</b>
+<b class="fc"><i>17</i>&nbsp;        this.color = color;</b>
+<b class="fc"><i>18</i>&nbsp;        this.gender = gender;</b>
+<b class="fc"><i>19</i>&nbsp;    }</b>
+<i>20</i>&nbsp;
+<i>21</i>&nbsp;    public String getColor() {
+<b class="nc"><i>22</i>&nbsp;        return color;</b>
+<i>23</i>&nbsp;    }
+<i>24</i>&nbsp;
+<i>25</i>&nbsp;    public Gender getGender() {
+<b class="nc"><i>26</i>&nbsp;        return gender;</b>
+<i>27</i>&nbsp;    }
+<i>28</i>&nbsp;
+<i>29</i>&nbsp;    public void setPlayerId(Integer playerId) {
+<b class="fc"><i>30</i>&nbsp;        this.playerId = playerId;</b>
+<b class="fc"><i>31</i>&nbsp;    }</b>
+<i>32</i>&nbsp;
+<i>33</i>&nbsp;    public Integer getPlayerId() {
+<b class="nc"><i>34</i>&nbsp;        return playerId;</b>
+<i>35</i>&nbsp;    }
+<i>36</i>&nbsp;
+<i>37</i>&nbsp;    /**
+<i>38</i>&nbsp;     * Brief overriden from Cellable
+<i>39</i>&nbsp;     * @return true only if the GameObject can occupy the Cell it is in, that is if it is a Worker
+<i>40</i>&nbsp;     */
+<i>41</i>&nbsp;    @Override
+<i>42</i>&nbsp;    public Boolean occupiesCell() {
+<b class="fc"><i>43</i>&nbsp;        return true;</b>
+<i>44</i>&nbsp;    }
+<i>45</i>&nbsp;
+<i>46</i>&nbsp;    /**
+<i>47</i>&nbsp;     * Brief overriden from Cellable
+<i>48</i>&nbsp;     * @return worker&#39;s owner&#39;s occupantId if it is a Worker, otherwise null
+<i>49</i>&nbsp;     */
+<i>50</i>&nbsp;    @Override
+<i>51</i>&nbsp;    public Integer occupantId() {
+<b class="fc"><i>52</i>&nbsp;        return playerId;</b>
+<i>53</i>&nbsp;    }
+<i>54</i>&nbsp;
+<i>55</i>&nbsp;    /**
+<i>56</i>&nbsp;     * Brief overriden from Cellable
+<i>57</i>&nbsp;     * @return true if the GameObject is a Dome type Block, otherwise false
+<i>58</i>&nbsp;     */
+<i>59</i>&nbsp;    @Override
+<i>60</i>&nbsp;    public Boolean blocksCell() {
+<b class="nc"><i>61</i>&nbsp;        return false;</b>
+<i>62</i>&nbsp;    }
+<i>63</i>&nbsp;
+<i>64</i>&nbsp;    /**
+<i>65</i>&nbsp;     * Brief overriden from Cellable
+<i>66</i>&nbsp;     * @return the height at which the Cell is set by pushed GameObjects
+<i>67</i>&nbsp;     */
+<i>68</i>&nbsp;    @Override
+<i>69</i>&nbsp;    public Integer correspondingLevel(){
+<b class="fc"><i>70</i>&nbsp;        return null;</b>
+<i>71</i>&nbsp;    }
+<i>72</i>&nbsp;
+<i>73</i>&nbsp;    @Override
+<i>74</i>&nbsp;    public boolean equals(Object o) {
+<b class="nc"><i>75</i>&nbsp;        if (this == o) return true;</b>
+<b class="nc"><i>76</i>&nbsp;        if (o == null || getClass() != o.getClass()) return false;</b>
+<b class="nc"><i>77</i>&nbsp;        Worker worker = (Worker) o;</b>
+<b class="nc"><i>78</i>&nbsp;        return color.equals(worker.color);</b>
+<i>79</i>&nbsp;    }
+<i>80</i>&nbsp;
+<i>81</i>&nbsp;    @Override
+<i>82</i>&nbsp;    public String toString() {
+<b class="nc"><i>83</i>&nbsp;        return &quot;Worker{&quot; +</b>
+<i>84</i>&nbsp;                &quot;color=&quot; + color +
+<i>85</i>&nbsp;                &quot;, playerId=&quot; + playerId +
+<b class="nc"><i>86</i>&nbsp;                super.toString() +</b>
+<i>87</i>&nbsp;                &#39;}&#39;;
+<i>88</i>&nbsp;    }
+<i>89</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

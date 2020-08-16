@@ -1,0 +1,14 @@
+<changelist name="Uncommitted_changes_before_Update_at_02_07_2020_01_40_[Default_Changelist]" date="1593646839855" recycled="true" deleted="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_02_07_2020_01_40_[Default_Changelist]/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before Update at 02/07/2020 01:40 [Default Changelist]" />
+  <binary>
+    <option name="BEFORE_PATH" value="out/artifacts/client_jar/ing-sw-2020-cojocaru-colasanti-d-angelo.jar" />
+    <option name="AFTER_PATH" value="shade/AM17.jar" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_02_07_2020_01_40_[Default_Changelist]/AM17.jar" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="out/artifacts/server_jar/ing-sw-2020-cojocaru-colasanti-d-angelo.jar" />
+    <option name="AFTER_PATH" />
+    <option name="SHELVED_PATH" />
+  </binary>
+</changelist>

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<godList listTitle = "God Cards">
+    <god>
+        <id>1</id>
+        <name>Apollo</name>
+        <title>God of Music</title>
+        <description>Your Move: Your Worker may move into an opponent Worker's space by forcing their Worker to the space yours just vacated.</description>
+        <trigger>YOURMOVE</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/1.png</imagePath>
+        <effects>s
+            <move optional="false" default="true" workerSelection="true">occupiedPositionsToo</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>2</id>
+        <name>Artemis</name>
+        <title>Goddess of the Hunt</title>
+        <description>Your Move: Your Worker may move one additional time, but not back to its initial space.</description>
+        <trigger>YOURMOVE</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/2.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">storeInitialPosition</move>
+            <move optional="true" default="true" workerSelection="false">excludingStoredPosition</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>3</id>
+        <name>Athena</name>
+        <title>Goddess of Wisdom</title>
+        <description>Opponent's Turn: If one of your Workers moved up on your last turn, opponent Workers cannot move up this turn.</description>
+        <trigger>OPPONENTTURN</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/3.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">theOnlyOneMovingUp</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>4</id>
+        <name>Atlas</name>
+        <title>Titan Shouldering the Heavens</title>
+        <description>Your Build: Your Worker may build a dome at any level.</description>
+        <trigger>YOURBUILD</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/4.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">domeAnywhere</build>
+        </effects>
+    </god>
+    <god>
+        <id>5</id>
+        <name>Demeter</name>
+        <title>Goddess of the Harvest</title>
+        <description>Your Build: Your Worker may build one additional time, but not on the same space.</description>
+        <trigger>YOURBUILD</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/5.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">storeBuildingPosition</build>
+            <build optional="true" default="true" workerSelection="false">excludingStoredPosition</build>
+        </effects>
+    </god>
+    <god>
+        <id>6</id>
+        <name>Hephaestus</name>
+        <title>God of Blacksmiths</title>
+        <description>Your Build: Your Worker may build one additional block (not dome) on top of your first block.</description>
+        <trigger>YOURBUILD</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/6.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">storeBuildingPosition</build>
+            <build optional="true" default="true" workerSelection="false">onStoredPositionNoDome</build>
+        </effects>
+    </god>
+    <god>
+        <id>8</id>
+        <name>Minotaur</name>
+        <title>Bull-headed Monster</title>
+        <description>Your Move: Your Worker may move into an opponent Worker's space, if their Worker can be forced one space straight backwards to an unoccupied space at any level.</description>
+        <trigger>YOURMOVE</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/8.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">forceEnemyBackwards</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>9</id>
+        <name>Pan</name>
+        <title>God of the Wild</title>
+        <description>Win Condition: You also win if your Worker moves down two or more levels.</description>
+        <trigger>WINCONDITION</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/9.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">winIfDownTwoLevels</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>10</id>
+        <name>Prometheus</name>
+        <title>Titan Benefactor of Mankind</title>
+        <description>Your Turn: If your Worker does not move up, it may build both before and after moving.</description>
+        <trigger>YOURTURN</trigger>
+        <advanced>false</advanced>
+        <imagePath>GodCards/10.png</imagePath>
+        <effects>
+            <build optional="true" default="true" workerSelection="true">noMoveUp</build>
+            <move optional="false" default="true" workerSelection="false">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>12</id>
+        <name>Ares</name>
+        <title>God of War</title>
+        <description>End of Your Turn: You may remove an unoccupied block (not dome) neighboring your unmoved Worker.</description>
+        <trigger>ENDOFYOURTURN</trigger>
+        <advanced>true</advanced>
+        <imagePath>GodCards/12.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">switchWorker</build>
+            <build optional="true" default="true" workerSelection="false">destroy</build>
+        </effects>
+    </god>
+    <god>
+        <id>20</id>
+        <name>Hera</name>
+        <title>Goddess of Marriage</title>
+        <description>Opponent's Turn: An opponent cannot win by moving into a perimeter space.</description>
+        <trigger>OPPONENTTURN</trigger>
+        <advanced>true</advanced>
+        <imagePath>GodCards/20.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">noWinIfEnemyOnPerimeter</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>21</id>
+        <name>Hestia</name>
+        <title>Goddess of Hearth and Home</title>
+        <description>Your Build: Your Worker may build one additional time, but this cannot be on a perimeter space.</description>
+        <trigger>YOURBUILD</trigger>
+        <advanced>true</advanced>
+        <imagePath>GodCards/21.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">defaultBuild</build>
+            <build optional="true" default="true" workerSelection="false">noOnPerimeter</build>
+        </effects>
+    </god>
+    <god>
+        <id>27</id>
+        <name>Poseidon</name>
+        <title>God of the Sea</title>
+        <description>End of Your Turn: If your unmoved Worker is on the ground level, it may build up to three times.</description>
+        <trigger>ENDOFYOURTURN</trigger>
+        <advanced>true</advanced>
+        <imagePath>GodCards/27.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">switchIfInactiveOnGround</build>
+            <build optional="true" default="true" workerSelection="false">defaultBuild</build>
+            <build optional="true" default="true" workerSelection="false">defaultBuild</build>
+            <build optional="true" default="true" workerSelection="false">defaultBuild</build>
+        </effects>
+    </god>
+    <god>
+        <id>30</id>
+        <name>Zeus</name>
+        <title>God of the Sky</title>
+        <description>Your Build: Your Worker may build a block under itself.</description>
+        <trigger>YOURBUILD</trigger>
+        <advanced>true</advanced>
+        <imagePath>GodCards/30.png</imagePath>
+        <effects>
+            <move optional="false" default="true" workerSelection="true">defaultMove</move>
+            <build optional="false" default="true" workerSelection="false">buildUnderYourself</build>
+        </effects>
+    </god>
+</godList>

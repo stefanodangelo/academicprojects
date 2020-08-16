@@ -1,0 +1,157 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ExpandableRulesContainer</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules.expandable</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ExpandableRulesContainer (it.polimi.ingsw.santorini.model.gameoperations.rules.expandable)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ExpandableRulesContainer</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (6/ 6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (15/ 15)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules.expandable;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameMarker;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.Expansion;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.BRules;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.rules.MRules;
+<i>8</i>&nbsp;
+<i>9</i>&nbsp;import java.util.ArrayList;
+<i>10</i>&nbsp;import java.util.List;
+<i>11</i>&nbsp;import java.util.function.Predicate;
+<i>12</i>&nbsp;
+<i>13</i>&nbsp;/**
+<i>14</i>&nbsp; * Brief ExpandableRules container that is able to expand both Move and Build rules
+<i>15</i>&nbsp; * @see MRules
+<i>16</i>&nbsp; * @see BRules
+<i>17</i>&nbsp; */
+<b class="fc"><i>18</i>&nbsp;public class ExpandableRulesContainer {</b>
+<i>19</i>&nbsp;
+<i>20</i>&nbsp;    /**
+<i>21</i>&nbsp;     * Brief The expandable MRules instance
+<i>22</i>&nbsp;     */
+<b class="fc"><i>23</i>&nbsp;    private final ExpandableMRules mRules = new MRules(false);</b>
+<i>24</i>&nbsp;
+<i>25</i>&nbsp;    /**
+<i>26</i>&nbsp;     * Brief The expandable BRules instance
+<i>27</i>&nbsp;     */
+<b class="fc"><i>28</i>&nbsp;    private final ExpandableBRules bRules = new BRules(false);</b>
+<i>29</i>&nbsp;
+<i>30</i>&nbsp;    /**
+<i>31</i>&nbsp;     * Brief Getter fo the MRules instance
+<i>32</i>&nbsp;     * @return ExpandableMRules expandable MRules
+<i>33</i>&nbsp;     */
+<i>34</i>&nbsp;    public ExpandableMRules mRules() {
+<b class="fc"><i>35</i>&nbsp;        return mRules;</b>
+<i>36</i>&nbsp;    }
+<i>37</i>&nbsp;
+<i>38</i>&nbsp;    /**
+<i>39</i>&nbsp;     * Brief Getter fo the BRules instance
+<i>40</i>&nbsp;     * @return ExpandableBRules expandable BRules
+<i>41</i>&nbsp;     */
+<i>42</i>&nbsp;    public ExpandableBRules bRules() {
+<b class="fc"><i>43</i>&nbsp;        return bRules;</b>
+<i>44</i>&nbsp;    }
+<i>45</i>&nbsp;
+<i>46</i>&nbsp;    /**
+<i>47</i>&nbsp;     * Brief Merges this container with another one
+<i>48</i>&nbsp;     * @param container ExpandableRulesContainer the container being merged
+<i>49</i>&nbsp;     */
+<i>50</i>&nbsp;    public void merge(ExpandableRulesContainer container) {
+<b class="fc"><i>51</i>&nbsp;        mRules.merge(container.mRules);</b>
+<b class="fc"><i>52</i>&nbsp;        bRules.merge(container.bRules);</b>
+<b class="fc"><i>53</i>&nbsp;    }</b>
+<i>54</i>&nbsp;
+<i>55</i>&nbsp;    /**
+<i>56</i>&nbsp;     * Brief Removes all the undesired expansions from all expandable rules in both instances
+<i>57</i>&nbsp;     * @param undesired Predicate the undesired filter
+<i>58</i>&nbsp;     */
+<i>59</i>&nbsp;    public void removeExpansionsByFilter(Predicate&lt;GameMarker&gt; undesired) {
+<b class="fc"><i>60</i>&nbsp;        mRules.toRules().removeExpansionsByFilter(undesired);</b>
+<b class="fc"><i>61</i>&nbsp;        bRules.toRules().removeExpansionsByFilter(undesired);</b>
+<b class="fc"><i>62</i>&nbsp;    }</b>
+<i>63</i>&nbsp;
+<i>64</i>&nbsp;    /**
+<i>65</i>&nbsp;     * Brief Returns all the Expansions contained across the stored Expandable Rules
+<i>66</i>&nbsp;     * @return List all the expansions
+<i>67</i>&nbsp;     */
+<i>68</i>&nbsp;    public List&lt;Expansion&lt;?,GameMarker&gt;&gt; getAllExpansions() {
+<b class="fc"><i>69</i>&nbsp;        List&lt;Expansion&lt;?,GameMarker&gt;&gt; expansions = new ArrayList&lt;&gt;();</b>
+<b class="fc"><i>70</i>&nbsp;        expansions.addAll(mRules.getAllExpansions());</b>
+<b class="fc"><i>71</i>&nbsp;        expansions.addAll(bRules.getAllExpansions());</b>
+<b class="fc"><i>72</i>&nbsp;        return expansions;</b>
+<i>73</i>&nbsp;    }
+<i>74</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

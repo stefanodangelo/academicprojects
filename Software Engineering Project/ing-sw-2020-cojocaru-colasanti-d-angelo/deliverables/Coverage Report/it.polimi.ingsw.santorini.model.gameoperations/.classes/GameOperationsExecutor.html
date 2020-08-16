@@ -1,0 +1,430 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: GameOperationsExecutor</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations</a> ]
+</div>
+
+<h1>Coverage Summary for Class: GameOperationsExecutor (it.polimi.ingsw.santorini.model.gameoperations)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">GameOperationsExecutor</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    76,3%
+  </span>
+  <span class="absValue">
+    (29/ 38)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    74%
+  </span>
+  <span class="absValue">
+    (91/ 123)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.*;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.Expansion;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.result.GameOperationResult;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.GameState;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.immutable.ImmutableGameState;
+<i>8</i>&nbsp;
+<i>9</i>&nbsp;import static it.polimi.ingsw.santorini.model.gameoperations.GameMarker.*;
+<i>10</i>&nbsp;
+<i>11</i>&nbsp;import java.util.*;
+<i>12</i>&nbsp;import java.util.function.Consumer;
+<i>13</i>&nbsp;import java.util.function.Predicate;
+<i>14</i>&nbsp;
+<i>15</i>&nbsp;/**
+<i>16</i>&nbsp; * Brief Represents a GameOperation executor that ca handle multiple operations in a row. It is responsible of
+<i>17</i>&nbsp; * applying the results from operation to operation and handling wins and losses
+<i>18</i>&nbsp; */
+<b class="fc"><i>19</i>&nbsp;public class GameOperationsExecutor {</b>
+<i>20</i>&nbsp;
+<i>21</i>&nbsp;    private Player currentPlayer;
+<i>22</i>&nbsp;    private GameState gameState;
+<i>23</i>&nbsp;    private GameOperationResult lastResult;
+<b class="fc"><i>24</i>&nbsp;    private Boolean abortNextOperations = false;</b>
+<b class="fc"><i>25</i>&nbsp;    private Boolean skippedWorkerSelection = false;</b>
+<i>26</i>&nbsp;
+<i>27</i>&nbsp;    private List&lt;GameOperation&lt;?,?&gt;&gt; operations;
+<i>28</i>&nbsp;    private ImmutableGameState stateBackup;
+<i>29</i>&nbsp;    private GameDelegate delegate;
+<i>30</i>&nbsp;    private Consumer&lt;Boolean&gt; onCompletion;
+<b class="fc"><i>31</i>&nbsp;    private Boolean win = false;</b>
+<i>32</i>&nbsp;
+<i>33</i>&nbsp;    /**
+<i>34</i>&nbsp;     * Brief Executes all the operations for a single turn of the game
+<i>35</i>&nbsp;     * @param operations are the operation to execute
+<i>36</i>&nbsp;     * @param currentPlayer is the player who is currently playing the turn
+<i>37</i>&nbsp;     * @param gameState is the state of the game
+<i>38</i>&nbsp;     * @param onCompletion called when completed with the win report of current player
+<i>39</i>&nbsp;     */
+<i>40</i>&nbsp;    public void executeOperations(List&lt;GameOperation&lt;?,?&gt;&gt; operations, Player currentPlayer, GameState gameState, Consumer&lt;Boolean&gt; onCompletion) {
+<b class="fc"><i>41</i>&nbsp;        reset(currentPlayer, gameState, operations, onCompletion);</b>
+<b class="fc"><i>42</i>&nbsp;        generateBackup();</b>
+<b class="fc"><i>43</i>&nbsp;        executeLoop();</b>
+<b class="fc"><i>44</i>&nbsp;    }</b>
+<i>45</i>&nbsp;
+<i>46</i>&nbsp;    /**
+<i>47</i>&nbsp;     * Brief executes the turn
+<i>48</i>&nbsp;     */
+<i>49</i>&nbsp;    private void executeLoop() {
+<b class="fc"><i>50</i>&nbsp;        for (int index = 0; index &lt; operations.size() &amp;&amp; !abortNextOperations; index++) {</b>
+<b class="fc"><i>51</i>&nbsp;            GameOperation&lt;?, ?&gt; operation = operations.get(index);</b>
+<b class="fc"><i>52</i>&nbsp;            if (!(lastResult.getWasSkipped() &amp;&amp; operation.isOptional())) {</b>
+<b class="fc"><i>53</i>&nbsp;                setupExecution(operation);</b>
+<b class="fc"><i>54</i>&nbsp;                executeOperation(operation);</b>
+<i>55</i>&nbsp;            }
+<i>56</i>&nbsp;        }
+<b class="fc"><i>57</i>&nbsp;        endExecution();</b>
+<b class="fc"><i>58</i>&nbsp;    }</b>
+<i>59</i>&nbsp;
+<i>60</i>&nbsp;    /**
+<i>61</i>&nbsp;     * Brief aborts the next operations&#39; computing
+<i>62</i>&nbsp;     */
+<i>63</i>&nbsp;    private void abortNextOperations() {
+<b class="nc"><i>64</i>&nbsp;        abortNextOperations = true;</b>
+<b class="nc"><i>65</i>&nbsp;    }</b>
+<i>66</i>&nbsp;
+<i>67</i>&nbsp;    /**
+<i>68</i>&nbsp;     * Brief flushes the expansions targeting current player to allow a correct execution of the next turn
+<i>69</i>&nbsp;     */
+<i>70</i>&nbsp;    private void flushExpansions() {
+<b class="fc"><i>71</i>&nbsp;        removeExpansions(filterByDefaultMarker());</b>
+<b class="fc"><i>72</i>&nbsp;        removeExpansions(filterByTarget(currentPlayer));</b>
+<b class="fc"><i>73</i>&nbsp;        removeExpansions(filterByTrueMark());</b>
+<b class="fc"><i>74</i>&nbsp;    }</b>
+<i>75</i>&nbsp;
+<i>76</i>&nbsp;    /**
+<i>77</i>&nbsp;     * Brief ends the execution of the turn
+<i>78</i>&nbsp;     */
+<i>79</i>&nbsp;    private void endExecution() {
+<b class="fc"><i>80</i>&nbsp;        if (victory()) endTurn();</b>
+<b class="fc"><i>81</i>&nbsp;        else requestUndoOrConfirm();</b>
+<b class="fc"><i>82</i>&nbsp;    }</b>
+<i>83</i>&nbsp;
+<i>84</i>&nbsp;    /**
+<i>85</i>&nbsp;     * Brief ends the execution of the turn
+<i>86</i>&nbsp;     * @return Boolean true if the player is victorious, false otherwise
+<i>87</i>&nbsp;     */
+<i>88</i>&nbsp;    private Boolean victory() {
+<b class="fc"><i>89</i>&nbsp;        return win != null ? win : false;</b>
+<i>90</i>&nbsp;    }
+<i>91</i>&nbsp;
+<i>92</i>&nbsp;    /**
+<i>93</i>&nbsp;     * Brief Asking the player for undo or confirmation of the turn
+<i>94</i>&nbsp;     */
+<i>95</i>&nbsp;    private void requestUndoOrConfirm() {
+<b class="fc"><i>96</i>&nbsp;        delegate.requestUndoOrConfirm(undo -&gt; {</b>
+<b class="fc"><i>97</i>&nbsp;            if (undo) undo();</b>
+<b class="fc"><i>98</i>&nbsp;            else endTurn();</b>
+<b class="fc"><i>99</i>&nbsp;        });</b>
+<b class="fc"><i>100</i>&nbsp;    }</b>
+<i>101</i>&nbsp;
+<i>102</i>&nbsp;    /**
+<i>103</i>&nbsp;     * Brief ends officially the turn
+<i>104</i>&nbsp;     */
+<i>105</i>&nbsp;    private void endTurn() {
+<b class="fc"><i>106</i>&nbsp;        delegate.onTurnOver();</b>
+<b class="fc"><i>107</i>&nbsp;        deployResult();</b>
+<b class="fc"><i>108</i>&nbsp;    }</b>
+<i>109</i>&nbsp;
+<i>110</i>&nbsp;    /**
+<i>111</i>&nbsp;     * Brief deploys the result after flushing the expansions
+<i>112</i>&nbsp;     * @param win the win report of the current player
+<i>113</i>&nbsp;     */
+<i>114</i>&nbsp;    private void deployResult(Boolean win) {
+<b class="fc"><i>115</i>&nbsp;        flushExpansions();</b>
+<b class="fc"><i>116</i>&nbsp;        if (onCompletion != null) onCompletion.accept(win);</b>
+<b class="fc"><i>117</i>&nbsp;    }</b>
+<i>118</i>&nbsp;
+<i>119</i>&nbsp;    /**
+<i>120</i>&nbsp;     * Brief deploys the result
+<i>121</i>&nbsp;     */
+<i>122</i>&nbsp;    private void deployResult() {
+<b class="fc"><i>123</i>&nbsp;        deployResult(win);</b>
+<b class="fc"><i>124</i>&nbsp;    }</b>
+<i>125</i>&nbsp;
+<i>126</i>&nbsp;    /**
+<i>127</i>&nbsp;     * Brief Undo feature: it restores the initial state and starts a new clean turn execution
+<i>128</i>&nbsp;     */
+<i>129</i>&nbsp;    private void undo() {
+<b class="nc"><i>130</i>&nbsp;        restore();</b>
+<b class="nc"><i>131</i>&nbsp;        executeLoop();</b>
+<b class="nc"><i>132</i>&nbsp;    }</b>
+<i>133</i>&nbsp;
+<i>134</i>&nbsp;    /**
+<i>135</i>&nbsp;     * Brief restores the initial state (at the beginning of the turn)
+<i>136</i>&nbsp;     */
+<i>137</i>&nbsp;    private void restore() {
+<b class="nc"><i>138</i>&nbsp;        resetVariables();</b>
+<b class="nc"><i>139</i>&nbsp;        restoreBackup();</b>
+<b class="nc"><i>140</i>&nbsp;    }</b>
+<i>141</i>&nbsp;
+<i>142</i>&nbsp;    /**
+<i>143</i>&nbsp;     * Brief restores the initial game state and the initial expansions
+<i>144</i>&nbsp;     */
+<i>145</i>&nbsp;    private void restoreBackup() {
+<b class="nc"><i>146</i>&nbsp;        restoreGameState();</b>
+<b class="nc"><i>147</i>&nbsp;        restoreExpansions();</b>
+<b class="nc"><i>148</i>&nbsp;        delegate.onBoardChanged(GameMap.getBoard(), null);</b>
+<b class="nc"><i>149</i>&nbsp;        delegate.onTurnOver();</b>
+<b class="nc"><i>150</i>&nbsp;    }</b>
+<i>151</i>&nbsp;
+<i>152</i>&nbsp;    /**
+<i>153</i>&nbsp;     * Brief restores the initial expansions
+<i>154</i>&nbsp;     */
+<i>155</i>&nbsp;    private void restoreExpansions() {
+<b class="nc"><i>156</i>&nbsp;        List&lt;Expansion&lt;?,GameMarker&gt;&gt; expansions = lastResult.expansionRules().getAllExpansions();</b>
+<b class="nc"><i>157</i>&nbsp;        if (expansions != null) expansions.removeIf(expansion -&gt; {</b>
+<b class="nc"><i>158</i>&nbsp;            List&lt;GameMarker&gt; markers = expansion.getMarkers();</b>
+<b class="nc"><i>159</i>&nbsp;            if (markers != null)</b>
+<b class="nc"><i>160</i>&nbsp;                for (GameMarker marker : markers)</b>
+<b class="nc"><i>161</i>&nbsp;                    if (marker.getMark()) return false;</b>
+<b class="nc"><i>162</i>&nbsp;            return true;</b>
+<i>163</i>&nbsp;        });
+<b class="nc"><i>164</i>&nbsp;    }</b>
+<i>165</i>&nbsp;
+<i>166</i>&nbsp;    /**
+<i>167</i>&nbsp;     * Brief restores the initial game state
+<i>168</i>&nbsp;     */
+<i>169</i>&nbsp;    private void restoreGameState() {
+<b class="nc"><i>170</i>&nbsp;        gameState = stateBackup.getMutable();</b>
+<b class="nc"><i>171</i>&nbsp;        delegate.onBoardChanged(GameMap.getBoard(), null);</b>
+<b class="nc"><i>172</i>&nbsp;    }</b>
+<i>173</i>&nbsp;
+<i>174</i>&nbsp;    /**
+<i>175</i>&nbsp;     * Brief generates the backup at the start of the turn
+<i>176</i>&nbsp;     */
+<i>177</i>&nbsp;    private void generateBackup() {
+<b class="fc"><i>178</i>&nbsp;        this.stateBackup = new ImmutableGameState(gameState);</b>
+<b class="fc"><i>179</i>&nbsp;        markEarlyExpansions();</b>
+<b class="fc"><i>180</i>&nbsp;    }</b>
+<i>181</i>&nbsp;
+<i>182</i>&nbsp;    /**
+<i>183</i>&nbsp;     * Brief resets the main parameters at the start of the turn
+<i>184</i>&nbsp;     * @param operations are the operation to execute
+<i>185</i>&nbsp;     * @param currentPlayer is the player who is currently playing the turn
+<i>186</i>&nbsp;     * @param gameState is the state of the game
+<i>187</i>&nbsp;     * @param onCompletion called when completed with the win report of current player
+<i>188</i>&nbsp;     */
+<i>189</i>&nbsp;    private void reset(Player currentPlayer, GameState gameState, List&lt;GameOperation&lt;?,?&gt;&gt; operations, Consumer&lt;Boolean&gt; onCompletion) {
+<b class="fc"><i>190</i>&nbsp;        this.currentPlayer = currentPlayer;</b>
+<b class="fc"><i>191</i>&nbsp;        this.gameState = gameState;</b>
+<b class="fc"><i>192</i>&nbsp;        setupGameStateCurrentPlayer();</b>
+<b class="fc"><i>193</i>&nbsp;        this.operations = operations;</b>
+<b class="fc"><i>194</i>&nbsp;        this.onCompletion = onCompletion;</b>
+<b class="fc"><i>195</i>&nbsp;        this.delegate = gameState.getDelegate();</b>
+<b class="fc"><i>196</i>&nbsp;        generateLastResult();</b>
+<b class="fc"><i>197</i>&nbsp;        resetVariables();</b>
+<b class="fc"><i>198</i>&nbsp;    }</b>
+<i>199</i>&nbsp;
+<i>200</i>&nbsp;    /**
+<i>201</i>&nbsp;     * Brief resets the main variables at the start of the turn
+<i>202</i>&nbsp;     */
+<i>203</i>&nbsp;    private void resetVariables() {
+<b class="fc"><i>204</i>&nbsp;        win = false;</b>
+<b class="fc"><i>205</i>&nbsp;        abortNextOperations = false;</b>
+<b class="fc"><i>206</i>&nbsp;        skippedWorkerSelection = false;</b>
+<b class="fc"><i>207</i>&nbsp;        lastResult.setWinReport(null);</b>
+<b class="fc"><i>208</i>&nbsp;        lastResult.setWasSkipped(null);</b>
+<b class="fc"><i>209</i>&nbsp;        lastResult.setAbortNextOperations(false);</b>
+<i>210</i>&nbsp;        lastResult.setActiveWorker(null);
+<i>211</i>&nbsp;        lastResult.setActivePosition(null);
+<i>212</i>&nbsp;    }
+<i>213</i>&nbsp;
+<i>214</i>&nbsp;    /**
+<b class="fc"><i>215</i>&nbsp;     * Brief generates a fresh last result storing</b>
+<b class="fc"><i>216</i>&nbsp;     */</b>
+<i>217</i>&nbsp;    private void generateLastResult() {
+<i>218</i>&nbsp;        if (lastResult == null) lastResult = new GameOperationResult();
+<i>219</i>&nbsp;    }
+<i>220</i>&nbsp;
+<i>221</i>&nbsp;    /**
+<b class="fc"><i>222</i>&nbsp;     * Brief marks the early expansions to allow expansions recovery afterwards</b>
+<b class="fc"><i>223</i>&nbsp;     */</b>
+<b class="fc"><i>224</i>&nbsp;    private void markEarlyExpansions() {</b>
+<i>225</i>&nbsp;        List&lt;Expansion&lt;?,GameMarker&gt;&gt; expansions = lastResult.expansionRules().getAllExpansions();
+<i>226</i>&nbsp;        if (expansions != null) expansions.forEach(expansion -&gt; expansion.getMarkers().add(earlyMarker()));
+<i>227</i>&nbsp;    }
+<i>228</i>&nbsp;
+<i>229</i>&nbsp;    /**
+<b class="fc"><i>230</i>&nbsp;     * Brief the marker used to mark early expansions</b>
+<i>231</i>&nbsp;     */
+<i>232</i>&nbsp;    private GameMarker earlyMarker() {
+<i>233</i>&nbsp;        return new GameMarker(true);
+<i>234</i>&nbsp;    }
+<i>235</i>&nbsp;
+<i>236</i>&nbsp;    /**
+<b class="fc"><i>237</i>&nbsp;     * Brief Sets up the parameters needed for the execution of the operation</b>
+<b class="fc"><i>238</i>&nbsp;     */</b>
+<b class="fc"><i>239</i>&nbsp;    private void setupExecution(GameOperation&lt;?,?&gt; operation) {</b>
+<i>240</i>&nbsp;        applyLastResult(operation);
+<i>241</i>&nbsp;        if (skippedWorkerSelection) skippedWorkerSelectionCorrection(operation);
+<i>242</i>&nbsp;    }
+<i>243</i>&nbsp;
+<i>244</i>&nbsp;    /**
+<i>245</i>&nbsp;     * Brief Applies the last result to the current operation
+<b class="fc"><i>246</i>&nbsp;     * @param operation is the operation to be executed</b>
+<b class="fc"><i>247</i>&nbsp;     */</b>
+<b class="fc"><i>248</i>&nbsp;    private void applyLastResult(GameOperation&lt;?,?&gt; operation) {</b>
+<i>249</i>&nbsp;        setupGameState();
+<i>250</i>&nbsp;        setupGameOperation(operation);
+<i>251</i>&nbsp;    }
+<i>252</i>&nbsp;
+<i>253</i>&nbsp;    /**
+<b class="fc"><i>254</i>&nbsp;     * Brief Updates abortNextOperation in order to eventually stop the operation&#39;s execution flow</b>
+<b class="fc"><i>255</i>&nbsp;     */</b>
+<i>256</i>&nbsp;    private void updateAbortNextOperations() {
+<i>257</i>&nbsp;        if (!abortNextOperations) abortNextOperations = lastResult.getAbortNextOperations();
+<i>258</i>&nbsp;    }
+<i>259</i>&nbsp;
+<i>260</i>&nbsp;    /**
+<b class="fc"><i>261</i>&nbsp;     * Brief Sets the current player in the state of the game</b>
+<b class="fc"><i>262</i>&nbsp;     */</b>
+<i>263</i>&nbsp;    private void setupGameStateCurrentPlayer() {
+<i>264</i>&nbsp;        gameState.setCurrentPlayer(currentPlayer);
+<i>265</i>&nbsp;    }
+<i>266</i>&nbsp;
+<i>267</i>&nbsp;    /**
+<b class="fc"><i>268</i>&nbsp;     * Brief Sets the active worker and the active position basing on the result of the last operation</b>
+<b class="fc"><i>269</i>&nbsp;     */</b>
+<b class="fc"><i>270</i>&nbsp;    private void setupGameState() {</b>
+<i>271</i>&nbsp;        gameState.setActiveWorker(lastResult.getActiveWorker());
+<i>272</i>&nbsp;        gameState.setActivePosition(lastResult.getActivePosition());
+<i>273</i>&nbsp;    }
+<i>274</i>&nbsp;
+<i>275</i>&nbsp;    /**
+<i>276</i>&nbsp;     * Brief Sets up the rules for the next operation basing on the results of the last one executed
+<b class="fc"><i>277</i>&nbsp;     * @param operation is the next operation to be executed</b>
+<b class="fc"><i>278</i>&nbsp;     */</b>
+<i>279</i>&nbsp;    private void setupGameOperation(GameOperation&lt;?,?&gt; operation) {
+<i>280</i>&nbsp;        operation.expandRules(lastResult.expansionRules());
+<i>281</i>&nbsp;    }
+<i>282</i>&nbsp;
+<i>283</i>&nbsp;    /**
+<b class="fc"><i>284</i>&nbsp;     * Brief Checks if the current players is a winner or a loser</b>
+<b class="fc"><i>285</i>&nbsp;     */</b>
+<b class="nc"><i>286</i>&nbsp;    private void handleWinReport() {</b>
+<b class="nc"><i>287</i>&nbsp;        win = lastResult.getWinReport();</b>
+<i>288</i>&nbsp;        if (win != null) {
+<b class="fc"><i>289</i>&nbsp;            if (!win) removeCurrentPlayerExpansions();</b>
+<i>290</i>&nbsp;            abortNextOperations();
+<i>291</i>&nbsp;        }
+<i>292</i>&nbsp;    }
+<i>293</i>&nbsp;
+<i>294</i>&nbsp;    /**
+<b class="nc"><i>295</i>&nbsp;     * Brief Removes all current player&#39;s expansions (used to disable its effects from next turn)</b>
+<b class="nc"><i>296</i>&nbsp;     */</b>
+<b class="nc"><i>297</i>&nbsp;    private void removeCurrentPlayerExpansions() {</b>
+<i>298</i>&nbsp;        removeExpansions(filterByOwner(currentPlayer));
+<i>299</i>&nbsp;        removeExpansions(filterByTarget(currentPlayer));
+<i>300</i>&nbsp;    }
+<i>301</i>&nbsp;
+<i>302</i>&nbsp;    /**
+<i>303</i>&nbsp;     * Brief Executes the operation passed to the function
+<b class="fc"><i>304</i>&nbsp;     * @param operation is the operation to be executed</b>
+<b class="fc"><i>305</i>&nbsp;     */</b>
+<b class="fc"><i>306</i>&nbsp;    private void executeOperation(GameOperation&lt;?,?&gt; operation) {</b>
+<b class="fc"><i>307</i>&nbsp;        operation.execute(gameState, (result) -&gt; {</b>
+<b class="fc"><i>308</i>&nbsp;            skippedWorkerSelectionCheck(operation, result);</b>
+<i>309</i>&nbsp;            afterExecution(result);
+<i>310</i>&nbsp;        });
+<i>311</i>&nbsp;    }
+<i>312</i>&nbsp;
+<i>313</i>&nbsp;    /**
+<b class="fc"><i>314</i>&nbsp;     * Brief Updates the executor state based on the last execution</b>
+<b class="fc"><i>315</i>&nbsp;     */</b>
+<b class="fc"><i>316</i>&nbsp;    private void afterExecution(GameOperationResult result) {</b>
+<b class="fc"><i>317</i>&nbsp;        lastResult = result;</b>
+<i>318</i>&nbsp;        handleWinReport();
+<i>319</i>&nbsp;        updateAbortNextOperations();
+<i>320</i>&nbsp;    }
+<i>321</i>&nbsp;
+<i>322</i>&nbsp;    /**
+<i>323</i>&nbsp;     * Brief Requires worker selection if it was previously skipped
+<b class="nc"><i>324</i>&nbsp;     * @param operation is the operation to be executed</b>
+<b class="nc"><i>325</i>&nbsp;     */</b>
+<b class="nc"><i>326</i>&nbsp;    private void skippedWorkerSelectionCorrection(GameOperation&lt;?,?&gt; operation) {</b>
+<i>327</i>&nbsp;        operation.requiresWorkerSelection();
+<i>328</i>&nbsp;        skippedWorkerSelection = false;
+<i>329</i>&nbsp;    }
+<i>330</i>&nbsp;
+<i>331</i>&nbsp;    /**
+<i>332</i>&nbsp;     * Brief Checks if worker selection was previously skipped and updates accordingly skippedWorkerSelection
+<i>333</i>&nbsp;     * @param operation is the executed operation
+<b class="fc"><i>334</i>&nbsp;     * @param result the last result</b>
+<b class="fc"><i>335</i>&nbsp;     */</b>
+<i>336</i>&nbsp;    private void skippedWorkerSelectionCheck(GameOperation&lt;?,?&gt; operation, GameOperationResult result) {
+<i>337</i>&nbsp;        if (operation.getRequiresWorkerSelection() &amp;&amp; result.getWasSkipped()) skippedWorkerSelection = true;
+<i>338</i>&nbsp;    }
+<i>339</i>&nbsp;
+<i>340</i>&nbsp;    /**
+<i>341</i>&nbsp;     * Brief Removes the undesired expansions from the last result&#39;s rules
+<b class="fc"><i>342</i>&nbsp;     * @param undesired is the condition used to filter the undesired expansions</b>
+<b class="fc"><i>343</i>&nbsp;     */</b>
+<i>344</i>&nbsp;    private void removeExpansions(Predicate&lt;GameMarker&gt; undesired) {
+<i>345</i>&nbsp;        lastResult.expansionRules().removeExpansionsByFilter(undesired);
+<i>346</i>&nbsp;    }
+<i>347</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

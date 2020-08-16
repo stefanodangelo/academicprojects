@@ -1,0 +1,134 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: ExpFunction</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.expansion</a> ]
+</div>
+
+<h1>Coverage Summary for Class: ExpFunction (it.polimi.ingsw.santorini.model.gameoperations.expansion)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ExpFunction</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/ 1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (4/ 4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (9/ 9)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.expansion;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.exceptions.ApplicationAllowanceException;
+<i>4</i>&nbsp;
+<i>5</i>&nbsp;import java.util.List;
+<i>6</i>&nbsp;import java.util.function.Function;
+<i>7</i>&nbsp;
+<i>8</i>&nbsp;/**
+<i>9</i>&nbsp; * Brief Expandable Function, it represents a special Function that can be expanded with more functions.
+<i>10</i>&nbsp; * It executes first the expansive expansions and then the restrictive expansions distinguishing their effect on
+<i>11</i>&nbsp; * the expandable by their expansion type
+<i>12</i>&nbsp; * @param &lt;T&gt; The type of the Function input
+<i>13</i>&nbsp; * @param &lt;R&gt; The type of the Function result
+<i>14</i>&nbsp; * @param &lt;S&gt; The type of the supported expansions&#39; marker
+<i>15</i>&nbsp; * @param &lt;A&gt; The type of the supported accumulator
+<i>16</i>&nbsp; * @see Function
+<i>17</i>&nbsp; * @see AccumulatorExpandable
+<i>18</i>&nbsp; */
+<i>19</i>&nbsp;public abstract class ExpFunction&lt;T, R, S, A&gt;
+<i>20</i>&nbsp;        extends AccumulatorExpandable&lt;Function&lt;T, R&gt;, S, FunctionExpansion&lt;T, R, S&gt;, T, R, A&gt;
+<i>21</i>&nbsp;        implements Function&lt;T, R&gt; {
+<i>22</i>&nbsp;
+<i>23</i>&nbsp;    /**
+<i>24</i>&nbsp;     * Brief constructor that initializes the expandable and applicable state of the Expandable.
+<i>25</i>&nbsp;     * Resets also the filter&#39;s state of the expandable
+<i>26</i>&nbsp;     * */
+<i>27</i>&nbsp;    public ExpFunction() {
+<b class="fc"><i>28</i>&nbsp;        super(true, true);</b>
+<b class="fc"><i>29</i>&nbsp;    }</b>
+<i>30</i>&nbsp;
+<i>31</i>&nbsp;    /**
+<i>32</i>&nbsp;     * {@inheritDoc}
+<i>33</i>&nbsp;     */
+<i>34</i>&nbsp;    @Override
+<i>35</i>&nbsp;    public R apply(T t) {
+<b class="fc"><i>36</i>&nbsp;        requiresApplicable();</b>
+<b class="fc"><i>37</i>&nbsp;        resetAccumulator();</b>
+<b class="fc"><i>38</i>&nbsp;        applyExpansions(orderedExpansions(), t);</b>
+<b class="fc"><i>39</i>&nbsp;        return accumulatorToResult(accumulator);</b>
+<i>40</i>&nbsp;    }
+<i>41</i>&nbsp;
+<i>42</i>&nbsp;    /**
+<i>43</i>&nbsp;     * Brief Applies all the expansions previously added to the expandable given the input.
+<i>44</i>&nbsp;     * @param expansions The expansions being applied
+<i>45</i>&nbsp;     * @param input The input to be used on each expansion
+<i>46</i>&nbsp;     */
+<i>47</i>&nbsp;    private void applyExpansions(List&lt;FunctionExpansion&lt;T, R, S&gt;&gt; expansions, T input) throws ApplicationAllowanceException {
+<b class="fc"><i>48</i>&nbsp;        applyExpansions(expansions,</b>
+<b class="fc"><i>49</i>&nbsp;                (expansion) -&gt; accumulator = onUpdateAccumulatorRequested(expansion, accumulator, input));</b>
+<b class="fc"><i>50</i>&nbsp;    }</b>
+<i>51</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

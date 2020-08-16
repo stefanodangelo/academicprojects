@@ -1,0 +1,267 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: DefaultMoveFactory</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">it.polimi.ingsw.santorini.model.gameoperations.rules.factory</a> ]
+</div>
+
+<h1>Coverage Summary for Class: DefaultMoveFactory (it.polimi.ingsw.santorini.model.gameoperations.rules.factory)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DefaultMoveFactory</td>
+<td class="coverageStat">
+  <span class="percent">
+    90%
+  </span>
+  <span class="absValue">
+    (9/ 10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    94,3%
+  </span>
+  <span class="absValue">
+    (33/ 35)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">DefaultMoveFactory$Index</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (4/ 4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (9/ 9)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    92,9%
+  </span>
+  <span class="absValue">
+    (13/ 14)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    95,5%
+  </span>
+  <span class="absValue">
+    (42/ 44)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package it.polimi.ingsw.santorini.model.gameoperations.rules.factory;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import it.polimi.ingsw.santorini.model.GameMap;
+<i>4</i>&nbsp;import it.polimi.ingsw.santorini.model.Position;
+<i>5</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.GameMarker;
+<i>6</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.ConsumerExpansion;
+<i>7</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.ExpPredicate;
+<i>8</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.expansion.PredicateExpansion;
+<i>9</i>&nbsp;import it.polimi.ingsw.santorini.model.gameoperations.state.MState;
+<i>10</i>&nbsp;
+<i>11</i>&nbsp;/**
+<i>12</i>&nbsp; * Brief The factory for Move Rules and their expansions
+<i>13</i>&nbsp; */
+<b class="nc"><i>14</i>&nbsp;public abstract class DefaultMoveFactory {</b>
+<i>15</i>&nbsp;
+<i>16</i>&nbsp;    /**
+<i>17</i>&nbsp;     * Brief the index enum that stores the order that default expansions are added
+<i>18</i>&nbsp;     */
+<b class="fc"><i>19</i>&nbsp;    public enum Index {</b>
+<b class="fc"><i>20</i>&nbsp;        NoCurrentPosition(0),</b>
+<b class="fc"><i>21</i>&nbsp;        NoOccupied(1),</b>
+<b class="fc"><i>22</i>&nbsp;        NoBlocked(2),</b>
+<b class="fc"><i>23</i>&nbsp;        OneLevelUp(3);</b>
+<i>24</i>&nbsp;
+<i>25</i>&nbsp;        /**
+<i>26</i>&nbsp;         * Brief index
+<i>27</i>&nbsp;         */
+<i>28</i>&nbsp;        private final Integer index;
+<i>29</i>&nbsp;
+<i>30</i>&nbsp;        /**
+<i>31</i>&nbsp;         * Brief getter for index
+<i>32</i>&nbsp;         * @return index
+<i>33</i>&nbsp;         */
+<i>34</i>&nbsp;        public Integer getIndex() {
+<b class="fc"><i>35</i>&nbsp;            return index;</b>
+<i>36</i>&nbsp;        }
+<i>37</i>&nbsp;
+<i>38</i>&nbsp;        /**
+<i>39</i>&nbsp;         * Brief main constructor that associates an index
+<i>40</i>&nbsp;         * @param index index
+<i>41</i>&nbsp;         */
+<b class="fc"><i>42</i>&nbsp;        Index(Integer index) {</b>
+<b class="fc"><i>43</i>&nbsp;            this.index = index;</b>
+<b class="fc"><i>44</i>&nbsp;        }</b>
+<i>45</i>&nbsp;    }
+<i>46</i>&nbsp;
+<i>47</i>&nbsp;    /**
+<i>48</i>&nbsp;     * Brief The default Expandable for allowedPositions rule
+<i>49</i>&nbsp;     * @return ExpPredicate
+<i>50</i>&nbsp;     */
+<i>51</i>&nbsp;    public static ExpPredicate&lt;MState, GameMarker&gt; allowedPositionsDefault() {
+<b class="fc"><i>52</i>&nbsp;        ExpPredicate&lt;MState, GameMarker&gt; allowedPositionsDefault = new ExpPredicate&lt;&gt;();</b>
+<i>53</i>&nbsp;
+<b class="fc"><i>54</i>&nbsp;        allowedPositionsDefault.addExpansion(new PredicateExpansion&lt;&gt;(DefaultMoveFactory::allowedPositionsPredicate1,</b>
+<b class="fc"><i>55</i>&nbsp;                true, GameMarker.defaultMarker()));</b>
+<i>56</i>&nbsp;
+<b class="fc"><i>57</i>&nbsp;        allowedPositionsDefault.addExpansion(new PredicateExpansion&lt;&gt;(DefaultMoveFactory::allowedPositionsPredicate2,</b>
+<b class="fc"><i>58</i>&nbsp;                false, GameMarker.defaultMarker()));</b>
+<i>59</i>&nbsp;
+<b class="fc"><i>60</i>&nbsp;        allowedPositionsDefault.addExpansion(new PredicateExpansion&lt;&gt;(DefaultMoveFactory::allowedPositionsPredicate3,</b>
+<b class="fc"><i>61</i>&nbsp;                false, GameMarker.defaultMarker()));</b>
+<i>62</i>&nbsp;
+<b class="fc"><i>63</i>&nbsp;        allowedPositionsDefault.addExpansion(new PredicateExpansion&lt;&gt;(DefaultMoveFactory::allowedPositionsPredicate4,</b>
+<b class="fc"><i>64</i>&nbsp;                false, GameMarker.defaultMarker()));</b>
+<i>65</i>&nbsp;
+<b class="fc"><i>66</i>&nbsp;        return allowedPositionsDefault;</b>
+<i>67</i>&nbsp;    }
+<i>68</i>&nbsp;
+<i>69</i>&nbsp;    /**
+<i>70</i>&nbsp;     * Brief The predicate for allowedPosition rule added as the default expansion in position 1.
+<i>71</i>&nbsp;     * Makes sure that the chosen position will be different from the current one
+<i>72</i>&nbsp;     * @param s the state
+<i>73</i>&nbsp;     * @return the result
+<i>74</i>&nbsp;     */
+<i>75</i>&nbsp;    public static Boolean allowedPositionsPredicate1(MState s) {
+<b class="fc"><i>76</i>&nbsp;        Position initialPos = s.activeWorkerPosition();</b>
+<b class="fc"><i>77</i>&nbsp;        Position finalPos = s.chosenPosition();</b>
+<b class="fc"><i>78</i>&nbsp;        return !finalPos.equals(initialPos);</b>
+<i>79</i>&nbsp;    }
+<i>80</i>&nbsp;
+<i>81</i>&nbsp;    /**
+<i>82</i>&nbsp;     * Brief The predicate for allowedPosition rule added as the default expansion in position 2.
+<i>83</i>&nbsp;     * Makes sure that the chosen position will not be occupied
+<i>84</i>&nbsp;     * @param s the state
+<i>85</i>&nbsp;     * @return the result
+<i>86</i>&nbsp;     */
+<i>87</i>&nbsp;    public static Boolean allowedPositionsPredicate2(MState s) {
+<b class="fc"><i>88</i>&nbsp;        Position finalPos = s.chosenPosition();</b>
+<b class="fc"><i>89</i>&nbsp;        GameMap map = s.map();</b>
+<b class="fc"><i>90</i>&nbsp;        return !map.cellAt(finalPos).isOccupied();</b>
+<i>91</i>&nbsp;    }
+<i>92</i>&nbsp;
+<i>93</i>&nbsp;    /**
+<i>94</i>&nbsp;     * Brief The predicate for allowedPosition rule added as the default expansion in position 3.
+<i>95</i>&nbsp;     * Makes sure that the chosen position will not be blocked
+<i>96</i>&nbsp;     * @param s the state
+<i>97</i>&nbsp;     * @return the result
+<i>98</i>&nbsp;     */
+<i>99</i>&nbsp;    public static Boolean allowedPositionsPredicate3(MState s) {
+<b class="fc"><i>100</i>&nbsp;        Position finalPos = s.chosenPosition();</b>
+<b class="fc"><i>101</i>&nbsp;        GameMap map = s.map();</b>
+<b class="fc"><i>102</i>&nbsp;        return !map.cellAt(finalPos).isBlocked();</b>
+<i>103</i>&nbsp;    }
+<i>104</i>&nbsp;
+<i>105</i>&nbsp;    /**
+<i>106</i>&nbsp;     * Brief The predicate for allowedPosition rule added as the default expansion in position 4
+<i>107</i>&nbsp;     * Makes sure that the chosen position will be at a height that differs of a maximum of one level
+<i>108</i>&nbsp;     * @param s the state
+<i>109</i>&nbsp;     * @return the result
+<i>110</i>&nbsp;     */
+<i>111</i>&nbsp;    public static Boolean allowedPositionsPredicate4(MState s) {
+<b class="fc"><i>112</i>&nbsp;        Position initialPos = s.activeWorkerPosition();</b>
+<b class="fc"><i>113</i>&nbsp;        Position finalPos = s.chosenPosition();</b>
+<b class="fc"><i>114</i>&nbsp;        GameMap map = s.map();</b>
+<b class="fc"><i>115</i>&nbsp;        return map.getLevelDifference(finalPos, initialPos) &lt;= 1;</b>
+<i>116</i>&nbsp;    }
+<i>117</i>&nbsp;
+<i>118</i>&nbsp;    /**
+<i>119</i>&nbsp;     * Brief The default Expansion for winCondition rule.
+<i>120</i>&nbsp;     * @return PredicateExpansion
+<i>121</i>&nbsp;     */
+<i>122</i>&nbsp;    public static PredicateExpansion&lt;MState, GameMarker&gt; winConditionDefaultExpansion() {
+<b class="fc"><i>123</i>&nbsp;        return new PredicateExpansion&lt;&gt;(DefaultMoveFactory::winConditionDefaultPredicate,</b>
+<b class="fc"><i>124</i>&nbsp;                true, GameMarker.defaultMarker());</b>
+<i>125</i>&nbsp;    }
+<i>126</i>&nbsp;
+<i>127</i>&nbsp;    /**
+<i>128</i>&nbsp;    $ * Brief The predicate for winCondition rule added as the default expansion
+<i>129</i>&nbsp;     * Makes sure that the current player wins if he goes up one level and finds himself on 3rd level
+<i>130</i>&nbsp;     * @param s the state
+<i>131</i>&nbsp;     * @return the result
+<i>132</i>&nbsp;     */
+<i>133</i>&nbsp;    public static Boolean winConditionDefaultPredicate(MState s) {
+<b class="fc"><i>134</i>&nbsp;        Position initialPos = s.activeWorkerPosition();</b>
+<b class="fc"><i>135</i>&nbsp;        Position finalPos = s.chosenPosition();</b>
+<b class="fc"><i>136</i>&nbsp;        GameMap map = s.map();</b>
+<b class="fc"><i>137</i>&nbsp;        return map.cellAt(finalPos).getLevel().equals(3) &amp;&amp;</b>
+<b class="nc"><i>138</i>&nbsp;                map.getLevelDifference(finalPos, initialPos).equals(1);</b>
+<i>139</i>&nbsp;    }
+<i>140</i>&nbsp;
+<i>141</i>&nbsp;    /**
+<i>142</i>&nbsp;     * Brief The default Expansion for movement rule.
+<i>143</i>&nbsp;     * @return ConsumerExpansion
+<i>144</i>&nbsp;     */
+<i>145</i>&nbsp;    public static ConsumerExpansion&lt;MState, GameMarker&gt; movementDefaultExpansion() {
+<b class="fc"><i>146</i>&nbsp;        return new ConsumerExpansion&lt;&gt;(DefaultMoveFactory::movementDefaultConsumer,</b>
+<b class="fc"><i>147</i>&nbsp;                GameMarker.defaultMarker());</b>
+<i>148</i>&nbsp;    }
+<i>149</i>&nbsp;
+<i>150</i>&nbsp;    /**
+<i>151</i>&nbsp;     * Brief The consumer for movement rule added as the default expansion
+<i>152</i>&nbsp;     * Makes sure that the active worker moves on the chosen position
+<i>153</i>&nbsp;     * @param s the state
+<i>154</i>&nbsp;     */
+<i>155</i>&nbsp;    public static void movementDefaultConsumer(MState s) {
+<b class="fc"><i>156</i>&nbsp;        s.map().move(s.activeWorkerPosition(), s.chosenPosition());</b>
+<b class="fc"><i>157</i>&nbsp;    }</b>
+<i>158</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-07-03 20:47</div>
+</div>
+</body>
+</html>

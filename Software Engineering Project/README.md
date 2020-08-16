@@ -3,9 +3,9 @@
 
 ## AM17 Group
 
-- ### Cojocaru - Cristian - 868087 - 10537857 - <br>cristian.cojocaru@mail.polimi.it
-- ### Colasanti - Luca - 891653 - 10627030 - <br>luca.colasanti@mail.polimi.it
-- ### D'Angelo - Stefano - 890033 - 10607664 - <br>stefano4.dangelo@mail.polimi.it
+- ### Cojocaru - Cristian - <br>cristian.cojocaru@mail.polimi.it
+- ### Colasanti - Luca - <br>luca.colasanti@mail.polimi.it
+- ### D'Angelo - Stefano - <br>stefano4.dangelo@mail.polimi.it
 
 ### Launch instructions
 ###### Both client.jar and server.jar file are located in */deliverables/jar*

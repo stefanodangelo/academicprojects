@@ -42,3 +42,6 @@ java -jar server.jar [-ip] <port>
 
 ###### Bug report
 A few bugs could show up when all the players disconnect (due to an incomplete implementation of an unrequested requirement) or when (in the GUI) the player is requested to choose his color. Also, in the GUI there's an incomplete functionality, that allows to visualize every player in the game together with their respective card (everything works fine in the CLI).
+
+### Copyright
+This project has been developed in collaboration with [Politecnico di Milano](https://polimi.it/) and [Cranio Creations](http://www.craniocreations.it/) without any profit purpose.

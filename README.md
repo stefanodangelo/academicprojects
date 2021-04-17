@@ -6,6 +6,6 @@ C program inspired by a social network in which users can enstablish one-sided r
 ## Digital Logic Design
 ###### (group project)
 VHDL program that simulates the Working Zone encoding system for a restricted group of addresses, that is those ones with 8 bits.
-## Software Engineering
+## Software Engineering 1
 ###### (group project)
 Online mode adaptation, completely written in Java, of an already existing board game called Santorini.

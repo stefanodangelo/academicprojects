@@ -1,0 +1,3 @@
+RGB: 254 124 18 - Target 0 (background)
+RGB: 255 255 255 - Target 1 (crop)
+RGB: 216 67 82 - Target 2 (weed)

@@ -1,4 +1,4 @@
-from convert import to_zap
+from .convert import to_zap
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from math import sqrt
 import json

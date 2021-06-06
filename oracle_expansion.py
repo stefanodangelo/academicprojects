@@ -1,6 +1,6 @@
 from zquantum.core.circuit import Circuit
 from qiskit import QuantumCircuit, QuantumRegister
-from .convert import (to_zap,
+from convert import (to_zap,
                       from_json)
 import json
 

@@ -1,9 +1,5 @@
-from .convert import to_zap
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from .init import init
-from .oracle import oracle
-from .diffuser import diffuser
-from .measure import add_measurements
+
+#from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from math import sqrt
 import json
 

@@ -4,7 +4,7 @@ from math import sqrt
 import json
 
 def build_circuit(n_qubits, save_path = 'circuit.json'):
-    """
+    
     message = "Welcome to Orquestra!"
 
     message_dict = {}
@@ -32,7 +32,7 @@ def build_circuit(n_qubits, save_path = 'circuit.json'):
     qc = add_measurements(qc, qr, cr)
     
     to_zap(qc, save_path)
-
+    """
 def init(qc, qr):
     qc.h(qr)
     

@@ -5,6 +5,7 @@ from .oracle import oracle
 from .diffuser import diffuser
 from .measure import add_measurements
 from math import sqrt
+import json
 
 def build_circuit(n_qubits, save_path = 'circuit.json'):
     message = "Welcome to Orquestra!"
@@ -33,5 +34,5 @@ def build_circuit(n_qubits, save_path = 'circuit.json'):
         qc.barrier(qr)
     qc = add_measurements(qc, qr, cr)
     
-    to_zap(qc, save_path
+    to_zap(qc, save_path)
     """

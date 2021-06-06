@@ -14,7 +14,7 @@ def build_circuit(n_qubits, save_path = 'circuit.json'):
     
     # Create circuit
     qc = QuantumCircuit(qr, cr)
-    """
+    
     # Build circuit
     qc = init(qc, qr)
     for i in range(round(sqrt(n_qubits))):
@@ -26,4 +26,3 @@ def build_circuit(n_qubits, save_path = 'circuit.json'):
     qc = add_measurements(qc, qr, cr)
     
     to_zap(qc, save_path)
-    """

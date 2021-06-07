@@ -1,5 +1,5 @@
 from zquantum.core.circuit import save_circuit
-from _circuit import Circuit
+from ._circuit import Circuit
 import json
 
 def load_circuit(file):

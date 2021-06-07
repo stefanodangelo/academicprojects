@@ -3,12 +3,13 @@ from math import sqrt
 import json
 #from zquantum.core.circuit import save_circuit
 
+"""
 import pyquil
 import cirq
 import random
 import warnings
 import numpy as np
-
+"""
 #from zquantum.core.circuit import Qubit, Circuit
 #from zquantum.core.circuit._gateset import ALL_GATES
 #from qiskit.circuit.quantumregister import Qubit as QiskitQubit

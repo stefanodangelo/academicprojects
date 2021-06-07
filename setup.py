@@ -1,7 +1,7 @@
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+#from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from math import sqrt
 import json
-from zquantum.core.circuit import save_circuit
+#from zquantum.core.circuit import save_circuit
 
 import pyquil
 import cirq
@@ -9,15 +9,15 @@ import random
 import warnings
 import numpy as np
 
-from zquantum.core.circuit import Qubit, Circuit
-from zquantum.core.circuit._gateset import ALL_GATES
-from qiskit.circuit.quantumregister import Qubit as QiskitQubit
-from qiskit.circuit.classicalregister import Clbit as QiskitClbit
-from qiskit.circuit.library.standard_gates.x import MCXGrayCode
+#from zquantum.core.circuit import Qubit, Circuit
+#from zquantum.core.circuit._gateset import ALL_GATES
+#from qiskit.circuit.quantumregister import Qubit as QiskitQubit
+#from qiskit.circuit.classicalregister import Clbit as QiskitClbit
+#from qiskit.circuit.library.standard_gates.x import MCXGrayCode
 
-from qiskit import IBMQ, Aer, assemble, transpile
-from qiskit.providers.ibmq import least_busy
-from qiskit.tools.monitor import job_monitor
+#from qiskit import IBMQ, Aer, assemble, transpile
+#from qiskit.providers.ibmq import least_busy
+#from qiskit.tools.monitor import job_monitor
 
 def build_circuit(n_qubits, save_path = 'circuit.json'):
     

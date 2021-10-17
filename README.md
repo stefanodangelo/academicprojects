@@ -13,12 +13,3 @@ Implementation in Python of a recommender systems for books.
 Implementation in Python of a neural network for the classification of images.
 ### CodaLab, 1st ACRE Cascade Competition
 Implementation in Python of a neural network for the segmentation of images.
-## Strategy & Marketing
-Definition of a strategy for the repositioning of the brand Chateau d’Ax in Italy.
-## Software Engineering 2
-Research project on the study of Orquestra’s features, a platform for the execution of quantum algorithms. Two algorithms
-have been treated: Grover’s algorithm, adapted to Orquestra, and Linear Regression, formulated as a QUBO
-problem and run on D-Wave.
-## Designing Digital Business Innovation Lab
-Digital Innovation project developed for Sony Music Italy consisting in the definition of a strategy, exploiting voice
-activation and AI algorithms, to increase Sony’s market share.

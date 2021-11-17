@@ -17,7 +17,6 @@ Implementation in Python of a neural network for the segmentation of images.
 # Not sharable projects
 Some projects are not shareable due to NDAs between me, my university and the involved company.
 These are:
-- Software Engineering 2 (company: **Zapata Computing**): research project on the study of Orquestra’s features, a platform for the execution of quantum algorithms
 - Digital Business Innovation (company: **Sony Music Italy**): development of a digital solution to increase revenues through voice activation
 - Strategy and Marketing (company: **Chateau d'Ax**): definition of a repositioning strategy in Italy
 

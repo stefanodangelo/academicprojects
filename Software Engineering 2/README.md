@@ -1,4 +1,5 @@
 # Research Project Y.2020-2021
+Note: The final report cannot be shared due to privacy constraints.
 
 ## Project description
 

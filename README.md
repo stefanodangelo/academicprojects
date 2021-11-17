@@ -7,6 +7,7 @@ VHDL program that simulates the Working Zone encoding system for a restricted gr
 ## Software Engineering 1
 Online mode adaptation, completely written in Java, of an already existing board game called Santorini.
 ## Recommender Systems
+#### Kaggle Competition
 Implementation in Python of a recommender systems for books.
 ## Artificial Neural Networks and Deep Learning 
 #### Kaggle competition

@@ -9,7 +9,17 @@ Online mode adaptation, completely written in Java, of an already existing board
 ## Recommender Systems
 Implementation in Python of a recommender systems for books.
 ## Artificial Neural Networks and Deep Learning 
-### Kaggle competition
+#### Kaggle competition
 Implementation in Python of a neural network for the classification of images.
-### CodaLab, 1st ACRE Cascade Competition
+#### CodaLab, 1st ACRE Cascade Competition
 Implementation in Python of a neural network for the segmentation of images.
+
+# Not sharable projects
+Some projects are not shareable due to NDAs between me, my university and the involved company.
+These are:
+- Software Engineering 2 (company: **Zapata Computing**): research project on the study of Orquestra’s features, a platform for the execution of quantum algorithms
+- Digital Business Innovation (company: **Sony Music Italy**): development of a digital solution to increase revenues through voice activation
+- Strategy and Marketing (company: **Chateau d'Ax**): definition of a repositioning strategy in Italy
+
+# Coming soon
+Final Degree Project on **Neural Style Transfer with Image Segmentation**.

@@ -14,6 +14,12 @@ Implementation in Python of a recommender systems for books.
 Implementation in Python of a neural network for the classification of images.
 #### CodaLab, 1st ACRE Cascade Competition
 Implementation in Python of a neural network for the segmentation of images.
+## Software Engineering 2
+Analysis of © Zapata Computing Orquestra platform, a quantum computing engine.
+## Data Science
+Convolutional Neural Network for the classification of [Pl@ntNet Dataset](https://plantnet.org/en/).
+## Statistical Computational Methods
+Classification of gesture data on one over 15 different dataset, and analysis of the influence of the other datasets on model's performance.
 
 # Not sharable projects
 Some projects are not shareable due to NDAs between me, my university and the involved company.

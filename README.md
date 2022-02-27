@@ -22,12 +22,11 @@ Convolutional Neural Network for the classification of [Pl@ntNet Dataset](https:
 Classification of gesture data on one over 15 different dataset, and analysis of the influence of the other datasets on model's performance.
 ## \_personal
 Personal projects developed outside the university context.
+## Computer Vision
+Final Degree Project on **Neural Style Transfer with Image Segmentation**. The goal was to transfer the artistic style of Van Gogh from his paintings to real photos in order to augment the dataset containing his paintings. The work done introduced some novelty to the state-of-the-art and it is publicly available at [this](https://github.com/stefanodangelo/vangogh) repository. 
 
 # Not sharable projects
 Some projects are not shareable due to NDAs between me, my university and the involved company.
 These are:
 - Digital Business Innovation (company: **Sony Music Italy**): development of a digital solution to increase revenues through voice activation
 - Strategy and Marketing (company: **Chateau d'Ax**): definition of a repositioning strategy in Italy
-
-# Coming soon
-Final Degree Project on **Neural Style Transfer with Image Segmentation**.

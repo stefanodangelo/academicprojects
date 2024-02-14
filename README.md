@@ -13,7 +13,7 @@ Implementation in Python of a neural network for the classification of images of
 ## CodaLab, 1st ACRE Cascade Competition | Kaggle Competition
 Implementation in Python of a neural network for the segmentation of crop, weeds, and background on high-resolution RGB images.
 ## Software Engineering 2
-Analysis of © Zapata Computing Orquestra platform, a quantum computing engine for orchestrating quantum workflows.
+Analysis of © Zapata Computing Orquestra platform, a quantum computing engine for orchestrating quantum workflows. The main code is available in [this](https://github.com/stefanodangelo/grover-orquestra) repository.
 ## Data Science
 Convolutional Neural Network in Python for the classification of [Pl@ntNet Dataset](https://plantnet.org/en/).
 ## Statistical Computational Methods
